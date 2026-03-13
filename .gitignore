@@ -1,0 +1,58 @@
+# Environment & secrets
+.env
+
+# Generated data (transcripts, analyses, reports)
+data/
+
+# Virtual environments
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Claude Code (root .claude/ is per-developer; plugin is in plugin/)
+/.claude/
+
+# MCP config (local dev servers)
+.mcp.json
+
+# Serena
+.serena/
+
+# Playwright
+.playwright-mcp/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (root-level Supabase CLI)
+node_modules/
+
+# Next.js build output (should only exist in web/, but ignore at root as safety net)
+.next/
+
+# Supabase CLI temp files
+supabase/.temp/
+
+# OS
+.DS_Store
+Thumbs.db

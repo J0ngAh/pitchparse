@@ -1,0 +1,38 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.14.1
+    hooks:
+      - id: mypy
+        files: ^api/
+        additional_dependencies: [types-PyYAML>=6.0.0, types-requests>=2.31.0]
+        args: [--ignore-missing-imports]
+
+  - repo: local
+    hooks:
+      - id: biome-format
+        name: biome format (web)
+        entry: bash -c 'cd web && npx @biomejs/biome check --formatter-enabled=true --linter-enabled=false --assist-enabled=false'
+        language: system
+        files: ^web/src/.*\.(ts|tsx)$
+        pass_filenames: false
+
+      - id: eslint
+        name: eslint (web)
+        entry: bash -c 'cd web && npm run lint'
+        language: system
+        files: ^web/src/.*\.(ts|tsx)$
+        pass_filenames: false
+
+      - id: tsc
+        name: tsc (web)
+        entry: bash -c 'cd web && npx tsc --noEmit'
+        language: system
+        files: ^web/src/.*\.(ts|tsx)$
+        pass_filenames: false

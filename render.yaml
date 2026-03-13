@@ -1,0 +1,48 @@
+services:
+  - type: web
+    name: pitchparse-api
+    runtime: docker
+    dockerfilePath: api/Dockerfile
+    dockerContext: .
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: STRIPE_STARTER_PRICE_ID
+        sync: false
+      - key: STRIPE_TEAM_PRICE_ID
+        sync: false
+      - key: INNGEST_EVENT_KEY
+        sync: false
+      - key: INNGEST_SIGNING_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        sync: false
+
+  - type: web
+    name: pitchparse-web
+    runtime: node
+    buildCommand: cd web && npm ci && npm run build
+    startCommand: node web/.next/standalone/server.js
+    envVars:
+      - key: API_URL
+        sync: false
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        sync: false
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        sync: false
+      - key: NODE_ENV
+        value: production

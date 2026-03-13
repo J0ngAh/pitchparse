@@ -1,0 +1,29 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+filterwarnings = [
+    "ignore::pydantic.warnings.PydanticDeprecatedSince20:inngest",
+]
+
+[tool.coverage.run]
+source = ["api"]
+omit = ["api/scripts/*", "api/inngest/client.py"]
+
+[tool.coverage.report]
+fail_under = 80
+show_missing = true
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
