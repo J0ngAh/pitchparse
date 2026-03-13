@@ -18,64 +18,58 @@ _SLUG_FILES = {
 }
 
 
-def get_active_prompt(org_id: str | None, slug: str) -> tuple[str, str | None]:
-    """Resolve the active prompt for an org and slug.
-
-    Resolution order: org-specific latest → global default latest → file fallback.
-    Returns (body, template_id). template_id is None for file fallback.
-    """
-    cache_key = (org_id, slug)
-    now = time.monotonic()
-    cached = _prompt_cache.get(cache_key)
-    if cached:
-        body, template_id, cached_at = cached
-        if (now - cached_at) < _PROMPT_TTL:
-            return body, template_id
-
-    db = get_supabase_client()
-
-    # Try org-specific latest version
-    if org_id:
-        result = rows_as_dicts(
-            db.table("prompt_templates")
-            .select("id, body")
-            .eq("org_id", org_id)
-            .eq("slug", slug)
-            .order("version", desc=True)
-            .limit(1)
-            .execute()
-        )
-        if result:
-            body, tid = result[0]["body"], str(result[0]["id"])
-            _prompt_cache[cache_key] = (body, tid, now)
-            return body, tid
-
-    # Try global default latest version
-    result = rows_as_dicts(
+def _query_latest_prompt(db, slug: str, org_id: str | None = None) -> tuple[str, str] | None:
+    """Query the latest prompt version from DB. Returns (body, template_id) or None."""
+    query = (
         db.table("prompt_templates")
         .select("id, body")
-        .is_("org_id", "null")
         .eq("slug", slug)
         .order("version", desc=True)
         .limit(1)
-        .execute()
     )
+    if org_id:
+        query = query.eq("org_id", org_id)
+    else:
+        query = query.is_("org_id", "null")
+    result = rows_as_dicts(query.execute())
     if result:
-        body, tid = result[0]["body"], str(result[0]["id"])
-        _prompt_cache[cache_key] = (body, tid, now)
-        return body, tid
+        return result[0]["body"], str(result[0]["id"])
+    return None
 
-    # File fallback
+
+def _file_fallback(slug: str) -> str | None:
+    """Load prompt from filesystem as last resort."""
     from pathlib import Path
 
-    api_dir = Path(__file__).resolve().parent.parent
     filename = _SLUG_FILES.get(slug)
-    if filename:
-        filepath = api_dir / "prompts" / filename
-        if filepath.exists():
-            body = _read_command_body(str(filepath))
-            _prompt_cache[cache_key] = (body, None, now)
-            return body, None
+    if not filename:
+        return None
+    filepath = Path(__file__).resolve().parent.parent / "prompts" / filename
+    return _read_command_body(str(filepath)) if filepath.exists() else None
+
+
+def get_active_prompt(org_id: str | None, slug: str) -> tuple[str, str | None]:
+    """Resolve the active prompt: org-specific → global default → file fallback."""
+    cache_key = (org_id, slug)
+    now = time.monotonic()
+    cached = _prompt_cache.get(cache_key)
+    if cached and (now - cached[2]) < _PROMPT_TTL:
+        return cached[0], cached[1]
+
+    db = get_supabase_client()
+
+    # Try org-specific, then global default
+    for qid in [org_id, None] if org_id else [None]:
+        found = _query_latest_prompt(db, slug, org_id=qid)
+        if found:
+            _prompt_cache[cache_key] = (found[0], found[1], now)
+            return found[0], found[1]
+
+    # File fallback
+    body = _file_fallback(slug)
+    if body:
+        _prompt_cache[cache_key] = (body, None, now)
+        return body, None
 
     return "", None
 

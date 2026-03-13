@@ -2,7 +2,7 @@
 
 import structlog
 from fastapi import APIRouter, HTTPException, Request
-from stripe import SignatureVerificationError, StripeClient, Webhook
+from stripe import Event, SignatureVerificationError, StripeClient, Webhook
 
 from api.auth import CurrentUser
 from api.config import get_settings
@@ -38,13 +38,24 @@ def _get_price_id(plan: str) -> str:
     return price_ids[plan]
 
 
+def _get_or_create_customer(stripe: StripeClient, db, org: dict, email: str) -> str:
+    """Get existing Stripe customer ID or create a new one."""
+    if org.get("stripe_customer_id"):
+        return org["stripe_customer_id"]
+    customer = stripe.v1.customers.create(
+        params={"email": email, "name": org["name"], "metadata": {"org_id": org["id"]}}
+    )
+    db.table("organizations").update({"stripe_customer_id": customer.id}).eq(
+        "id", org["id"]
+    ).execute()
+    return customer.id
+
+
 @router.post("/checkout", response_model=CheckoutResponse)
 async def create_checkout(req: CheckoutRequest, user: CurrentUser):
     """Create a Stripe Checkout session for the chosen plan."""
     stripe = _get_stripe()
     db = get_supabase_client()
-
-    # Get or create Stripe customer
     org_result = (
         db.table("organizations")
         .select("id, name, stripe_customer_id, stripe_subscription_id")
@@ -53,27 +64,7 @@ async def create_checkout(req: CheckoutRequest, user: CurrentUser):
         .execute()
     )
     org = row_as_dict(org_result)
-
-    if not org.get("stripe_customer_id"):
-        customer = stripe.v1.customers.create(
-            params={
-                "email": user["email"],
-                "name": org["name"],
-                "metadata": {"org_id": org["id"]},
-            }
-        )
-        db.table("organizations").update(
-            {
-                "stripe_customer_id": customer.id,
-            }
-        ).eq("id", org["id"]).execute()
-        customer_id = customer.id
-    else:
-        customer_id = org["stripe_customer_id"]
-
-    price_id = _get_price_id(req.plan)
-
-    # 14-day free trial for first-time subscribers only
+    customer_id = _get_or_create_customer(stripe, db, org, user["email"])
     is_first_subscription = not org.get("stripe_subscription_id")
     subscription_data = {"trial_period_days": 14} if is_first_subscription else {}
 
@@ -81,14 +72,13 @@ async def create_checkout(req: CheckoutRequest, user: CurrentUser):
         params={  # type: ignore[arg-type]
             "customer": customer_id,
             "mode": "subscription",
-            "line_items": [{"price": price_id, "quantity": 1}],
+            "line_items": [{"price": _get_price_id(req.plan), "quantity": 1}],
             "success_url": req.success_url,
             "cancel_url": req.cancel_url,
             "metadata": {"org_id": org["id"], "plan": req.plan},
             "subscription_data": subscription_data,
         }
     )
-
     return CheckoutResponse(checkout_url=session.url or "")
 
 
@@ -130,56 +120,52 @@ async def get_subscription(user: CurrentUser):
     )
 
 
-@router.post("/webhook")
-async def stripe_webhook(request: Request):
-    """Handle Stripe webhook events for subscription lifecycle."""
+def _verify_webhook(payload: bytes, sig_header: str) -> Event:
+    """Verify Stripe webhook signature and construct event."""
     settings = get_settings()
-    payload = await request.body()
-    sig_header = request.headers.get("Stripe-Signature", "")
-
     try:
-        event = Webhook.construct_event(
-            payload.decode("utf-8"),
-            sig_header,
-            settings.stripe_webhook_secret,
+        return Webhook.construct_event(
+            payload.decode("utf-8"), sig_header, settings.stripe_webhook_secret
         )
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid payload")
     except SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Invalid signature")
 
+
+def _handle_checkout_completed(db, session) -> None:
+    """Activate subscription after successful checkout."""
+    org_id = session.get("metadata", {}).get("org_id")
+    plan = session.get("metadata", {}).get("plan", "starter")
+    subscription_id = session.get("subscription")
+    if org_id and subscription_id:
+        quota = PLAN_CONFIG.get(plan, {}).get("quota", 50)
+        db.table("organizations").update(
+            {"plan": plan, "stripe_subscription_id": subscription_id, "analysis_quota": quota}
+        ).eq("id", org_id).execute()
+
+
+@router.post("/webhook")
+async def stripe_webhook(request: Request):
+    """Handle Stripe webhook events for subscription lifecycle."""
+    payload = await request.body()
+    event = _verify_webhook(payload, request.headers.get("Stripe-Signature", ""))
     db = get_supabase_client()
 
-    if event.type == "checkout.session.completed":
-        session = event.data.object
-        org_id = session.get("metadata", {}).get("org_id")
-        plan = session.get("metadata", {}).get("plan", "starter")
-        subscription_id = session.get("subscription")
-
-        if org_id and subscription_id:
-            quota = PLAN_CONFIG.get(plan, {}).get("quota", 50)
-            db.table("organizations").update(
-                {
-                    "plan": plan,
-                    "stripe_subscription_id": subscription_id,
-                    "analysis_quota": quota,
-                }
-            ).eq("id", org_id).execute()
-
-    elif event.type == "customer.subscription.updated":
-        subscription = event.data.object
-        _handle_subscription_update(db, subscription)
-
-    elif event.type == "customer.subscription.deleted":
-        subscription = event.data.object
-        _handle_subscription_cancelled(db, subscription)
-
-    elif event.type == "invoice.paid":
-        _handle_invoice_paid(db, event.data.object)
-
-    elif event.type == "invoice.payment_failed":
-        invoice = event.data.object
-        logger.warning("Payment failed for invoice %s", invoice.get("id"))
+    handlers = {
+        "checkout.session.completed": lambda: _handle_checkout_completed(db, event.data.object),
+        "customer.subscription.updated": lambda: _handle_subscription_update(db, event.data.object),
+        "customer.subscription.deleted": lambda: _handle_subscription_cancelled(
+            db, event.data.object
+        ),
+        "invoice.paid": lambda: _handle_invoice_paid(db, event.data.object),
+        "invoice.payment_failed": lambda: logger.warning(
+            "Payment failed for invoice %s", event.data.object.get("id")
+        ),
+    }
+    handler = handlers.get(event.type)
+    if handler:
+        handler()
 
     return {"status": "ok"}
 

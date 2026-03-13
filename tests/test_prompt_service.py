@@ -9,21 +9,28 @@ from api.services import prompt_service
 
 # fmt: off
 def _eq_chain(mock_db: MagicMock) -> MagicMock:
-    """Return the .eq().eq().order().limit() mock chain endpoint."""
+    """Return the .select().eq(slug).order().limit().eq(org_id) mock chain endpoint."""
+    return (mock_db.table.return_value.select.return_value
+            .eq.return_value.order.return_value
+            .limit.return_value.eq.return_value)
+
+
+def _is_chain(mock_db: MagicMock) -> MagicMock:
+    """Return the .select().eq(slug).order().limit().is_() mock chain endpoint."""
+    return (mock_db.table.return_value.select.return_value
+            .eq.return_value.order.return_value
+            .limit.return_value.is_.return_value)
+
+
+def _create_version_chain(mock_db: MagicMock) -> MagicMock:
+    """Return the .eq().eq().order().limit() chain for create_prompt_version lookups."""
     return (mock_db.table.return_value.select.return_value
             .eq.return_value.eq.return_value
             .order.return_value.limit.return_value)
 
 
-def _is_chain(mock_db: MagicMock) -> MagicMock:
-    """Return the .is_().eq().order().limit() mock chain endpoint."""
-    return (mock_db.table.return_value.select.return_value
-            .is_.return_value.eq.return_value
-            .order.return_value.limit.return_value)
-
-
-def _order_chain(mock_db: MagicMock) -> MagicMock:
-    """Return the .eq().eq().order() mock chain endpoint (no limit)."""
+def _list_version_chain(mock_db: MagicMock) -> MagicMock:
+    """Return the .eq().eq().order() chain for list_prompt_versions."""
     return (mock_db.table.return_value.select.return_value
             .eq.return_value.eq.return_value
             .order.return_value)
@@ -139,7 +146,7 @@ class TestCreatePromptVersion:
 
         empty_response = MagicMock()
         empty_response.data = []
-        _eq_chain(mock_db).execute.return_value = empty_response
+        _create_version_chain(mock_db).execute.return_value = empty_response
 
         insert_response = MagicMock()
         insert_response.data = [
@@ -168,7 +175,7 @@ class TestCreatePromptVersion:
 
         existing_response = MagicMock()
         existing_response.data = [{"version": 3}]
-        _eq_chain(mock_db).execute.return_value = existing_response
+        _create_version_chain(mock_db).execute.return_value = existing_response
 
         insert_response = MagicMock()
         insert_response.data = [
@@ -202,7 +209,7 @@ class TestCreatePromptVersion:
 
         empty_response = MagicMock()
         empty_response.data = []
-        _eq_chain(mock_db).execute.return_value = empty_response
+        _create_version_chain(mock_db).execute.return_value = empty_response
 
         insert_response = MagicMock()
         insert_response.data = [{"id": "new", "version": 1, "slug": "analyze"}]
@@ -248,7 +255,7 @@ class TestListPromptVersions:
                 "created_at": "2026-01-01",
             },
         ]
-        _order_chain(mock_db).execute.return_value = response
+        _list_version_chain(mock_db).execute.return_value = response
 
         result = prompt_service.list_prompt_versions("org-1", "analyze")
 

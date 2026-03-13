@@ -33,52 +33,70 @@ def _build_coach_prompt() -> str:
     return _read_command_body(str(prompt_path))
 
 
+def _format_header_fields(data: dict) -> list[str]:
+    """Format top-level analysis metadata fields."""
+    parts = []
+    if data.get("consultant_name"):
+        parts.append(f"**Consultant:** {data['consultant_name']}")
+    if data.get("prospect_name"):
+        parts.append(f"**Prospect:** {data['prospect_name']}")
+    if data.get("overall_score") is not None:
+        parts.append(f"**Overall Score:** {data['overall_score']}/100")
+    if data.get("rating"):
+        parts.append(f"**Rating:** {data['rating']}")
+    return parts
+
+
+def _format_scorecard(scorecard: list[dict]) -> list[str]:
+    """Format KPI scorecard section."""
+    return ["\n## Scorecard"] + [
+        f"- **{kpi['kpi']}:** {kpi['score']}/5 — {kpi['evidence']}" for kpi in scorecard
+    ]
+
+
+def _format_phases(phases: list[dict]) -> list[str]:
+    """Format phase breakdown section."""
+    parts = ["\n## Phase Breakdown"]
+    for phase in phases:
+        parts.append(
+            f"### Phase {phase['number']}: {phase['name']} — {phase['score']}/{phase['max']}"
+        )
+        if phase.get("strengths"):
+            parts.append(f"Strengths: {phase['strengths']}")
+        if phase.get("gaps"):
+            parts.append(f"Gaps: {phase['gaps']}")
+    return parts
+
+
+def _format_coaching(coaching: list[dict]) -> list[str]:
+    """Format coaching recommendations section."""
+    parts = ["\n## Coaching Recommendations"]
+    for rec in coaching:
+        parts.append(
+            f"- **P{rec['priority']} ({rec.get('level', 'N/A')}): {rec.get('title', '')}**"
+        )
+        if rec.get("issue"):
+            parts.append(f"  Issue: {rec['issue']}")
+        if rec.get("action"):
+            parts.append(f"  Action: {rec['action']}")
+    return parts
+
+
 def _build_analysis_context(analysis_data: dict) -> str:
     """Format analysis data as context for the coach agent."""
-    parts = []
-
-    if analysis_data.get("consultant_name"):
-        parts.append(f"**Consultant:** {analysis_data['consultant_name']}")
-    if analysis_data.get("prospect_name"):
-        parts.append(f"**Prospect:** {analysis_data['prospect_name']}")
-    if analysis_data.get("overall_score") is not None:
-        parts.append(f"**Overall Score:** {analysis_data['overall_score']}/100")
-    if analysis_data.get("rating"):
-        parts.append(f"**Rating:** {analysis_data['rating']}")
+    parts = _format_header_fields(analysis_data)
 
     if analysis_data.get("scorecard"):
-        parts.append("\n## Scorecard")
-        for kpi in analysis_data["scorecard"]:
-            parts.append(f"- **{kpi['kpi']}:** {kpi['score']}/5 — {kpi['evidence']}")
-
+        parts.extend(_format_scorecard(analysis_data["scorecard"]))
     if analysis_data.get("phases"):
-        parts.append("\n## Phase Breakdown")
-        for phase in analysis_data["phases"]:
-            num, name = phase["number"], phase["name"]
-            score, mx = phase["score"], phase["max"]
-            parts.append(f"### Phase {num}: {name} — {score}/{mx}")
-            if phase.get("strengths"):
-                parts.append(f"Strengths: {phase['strengths']}")
-            if phase.get("gaps"):
-                parts.append(f"Gaps: {phase['gaps']}")
-
+        parts.extend(_format_phases(analysis_data["phases"]))
     if analysis_data.get("coaching"):
-        parts.append("\n## Coaching Recommendations")
-        for rec in analysis_data["coaching"]:
-            level = rec.get("level", "N/A")
-            title = rec.get("title", "")
-            parts.append(f"- **P{rec['priority']} ({level}): {title}**")
-            if rec.get("issue"):
-                parts.append(f"  Issue: {rec['issue']}")
-            if rec.get("action"):
-                parts.append(f"  Action: {rec['action']}")
+        parts.extend(_format_coaching(analysis_data["coaching"]))
 
-    if analysis_data.get("sentiment"):
-        sent = analysis_data["sentiment"]
-        if sent.get("trajectory"):
-            parts.append(f"\n## Sentiment: {sent['trajectory']}")
+    sent = analysis_data.get("sentiment", {})
+    if sent.get("trajectory"):
+        parts.append(f"\n## Sentiment: {sent['trajectory']}")
 
-    # Include executive summary from body
     body = analysis_data.get("body", "")
     if body:
         import re
@@ -90,30 +108,40 @@ def _build_analysis_context(analysis_data: dict) -> str:
     return "\n".join(parts)
 
 
+def _register_coach_tools(agent: Agent[CoachDeps, str]) -> None:
+    """Register all coach agent tools."""
+    from api.services.coach_tools import (
+        compare_consultants,
+        get_analysis_detail,
+        get_org_config,
+        get_team_stats,
+        get_transcript_excerpt,
+        list_analyses,
+        search_coaching_patterns,
+    )
+
+    for tool in (
+        list_analyses,
+        get_analysis_detail,
+        get_transcript_excerpt,
+        compare_consultants,
+        get_team_stats,
+        search_coaching_patterns,
+        get_org_config,
+    ):
+        agent.tool(tool)
+
+
 def build_coach_agent(
     api_key: str,
     model: str | None = None,
     custom_prompt: str | None = None,
 ) -> Agent[CoachDeps, str]:
-    """Create a PydanticAI agent for coaching conversations.
-
-    Args:
-        api_key: Anthropic API key.
-        model: Model ID to use. Defaults to Sonnet 4.6 for conversational quality.
-        custom_prompt: Org-specific coach prompt from DB. Falls back to default.
-    """
+    """Create a PydanticAI agent for coaching conversations."""
     model = model or "claude-sonnet-4-6-20250514"
-    base_prompt = custom_prompt or _build_coach_prompt()
-
-    model_instance = AnthropicModel(
-        model,
-        provider=AnthropicProvider(api_key=api_key),
-    )
-
+    model_instance = AnthropicModel(model, provider=AnthropicProvider(api_key=api_key))
     agent: Agent[CoachDeps, str] = Agent(
-        model_instance,
-        deps_type=CoachDeps,
-        system_prompt=base_prompt,
+        model_instance, deps_type=CoachDeps, system_prompt=custom_prompt or _build_coach_prompt()
     )
 
     @agent.system_prompt
@@ -126,25 +154,7 @@ def build_coach_agent(
             )
         return ""
 
-    # Register agent tools
-    from api.services.coach_tools import (
-        compare_consultants,
-        get_analysis_detail,
-        get_org_config,
-        get_team_stats,
-        get_transcript_excerpt,
-        list_analyses,
-        search_coaching_patterns,
-    )
-
-    agent.tool(list_analyses)
-    agent.tool(get_analysis_detail)
-    agent.tool(get_transcript_excerpt)
-    agent.tool(compare_consultants)
-    agent.tool(get_team_stats)
-    agent.tool(search_coaching_patterns)
-    agent.tool(get_org_config)
-
+    _register_coach_tools(agent)
     return agent
 
 

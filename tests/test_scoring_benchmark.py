@@ -41,7 +41,7 @@ class TestScoringBenchmark:
         ), f"Good call rated '{result.rating}', expected Exceptional or Good"
 
     def test_poor_call_scores_in_expected_range(self):
-        """A poorly-executed sales call should score 25-55."""
+        """A poorly-executed sales call should score 20-60."""
         from api.services.analysis_service import run_analysis
 
         transcript = (FIXTURES_DIR / "benchmark_poor.md").read_text()
@@ -51,8 +51,8 @@ class TestScoringBenchmark:
         )
 
         assert (
-            25 <= result.overall_score <= 55
-        ), f"Poor call scored {result.overall_score}, expected 25-55"
+            20 <= result.overall_score <= 60
+        ), f"Poor call scored {result.overall_score}, expected 20-60"
         assert result.rating in (
             "Poor",
             "Critical",

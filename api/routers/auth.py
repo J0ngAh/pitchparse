@@ -14,6 +14,30 @@ limiter = Limiter(key_func=get_remote_address)
 router = APIRouter()
 
 
+def _accept_invitation(db, user_id: str, req: SignupRequest, invitation: dict) -> tuple[str, str]:
+    """Join existing org via pending invitation. Returns (org_id, role)."""
+    role, org_id = invitation["role"], invitation["org_id"]
+    db.table("users").insert(
+        {"id": user_id, "org_id": org_id, "email": req.email, "name": req.name, "role": role}
+    ).execute()
+    db.table("invitations").update({"status": "accepted"}).eq("id", invitation["id"]).execute()
+    return org_id, role
+
+
+def _create_org_and_user(db, user_id: str, req: SignupRequest) -> tuple[str, str]:
+    """Create new org and user as manager. Returns (org_id, role)."""
+    org_result = (
+        db.table("organizations")
+        .insert({"name": req.org_name, "plan": "free", "analysis_quota": 5})
+        .execute()
+    )
+    org_id = rows_as_dicts(org_result)[0]["id"]
+    db.table("users").insert(
+        {"id": user_id, "org_id": org_id, "email": req.email, "name": req.name, "role": "manager"}
+    ).execute()
+    return org_id, "manager"
+
+
 @router.post("/signup", response_model=AuthResponse)
 @limiter.limit("5/minute")
 async def signup(req: SignupRequest, request: Request):
@@ -22,7 +46,6 @@ async def signup(req: SignupRequest, request: Request):
     db = get_supabase_from_request(request)
 
     try:
-        # Check for pending invitation
         invite_result = (
             db.table("invitations")
             .select("*")
@@ -32,55 +55,16 @@ async def signup(req: SignupRequest, request: Request):
         )
         invitation = rows_as_dicts(invite_result)[0] if invite_result.data else None
 
-        auth_response = auth_client.auth.sign_up(
-            {
-                "email": req.email,
-                "password": req.password,
-            }
-        )
+        auth_response = auth_client.auth.sign_up({"email": req.email, "password": req.password})
         user = auth_response.user
         if not user:
             raise HTTPException(status_code=400, detail="Signup failed")
 
+        user_id = str(user.id)
         if invitation:
-            # Accept invitation — join existing org with invited role
-            role = invitation["role"]
-            org_id = invitation["org_id"]
-
-            db.table("users").insert(
-                {
-                    "id": str(user.id),
-                    "org_id": org_id,
-                    "email": req.email,
-                    "name": req.name,
-                    "role": role,
-                }
-            ).execute()
-
-            # Mark invitation as accepted
-            db.table("invitations").update({"status": "accepted"}).eq(
-                "id", invitation["id"]
-            ).execute()
+            org_id, role = _accept_invitation(db, user_id, req, invitation)
         else:
-            # New org creator — gets manager role
-            org_result = (
-                db.table("organizations")
-                .insert({"name": req.org_name, "plan": "free", "analysis_quota": 5})
-                .execute()
-            )
-            org = rows_as_dicts(org_result)[0]
-            org_id = org["id"]
-            role = "manager"
-
-            db.table("users").insert(
-                {
-                    "id": str(user.id),
-                    "org_id": org_id,
-                    "email": req.email,
-                    "name": req.name,
-                    "role": role,
-                }
-            ).execute()
+            org_id, role = _create_org_and_user(db, user_id, req)
 
         session = auth_response.session
         if not session:
@@ -94,12 +78,11 @@ async def signup(req: SignupRequest, request: Request):
 
         return AuthResponse(
             access_token=session.access_token,
-            user_id=str(user.id),
+            user_id=user_id,
             org_id=org_id,
             email=req.email,
             role=role,
         )
-
     except HTTPException:
         raise
     except Exception as e:
