@@ -121,8 +121,8 @@
 ## Phase 2 Backlog (after first revenue)
 
 - [x] Local JWT verification (PyJWT + Supabase JWKs endpoint — avoids network call per auth'd request)
-- [ ] Prompt versioning (templates in DB)
-- [ ] White-label branding (logos, colors, subdomain routing)
+- [x] Prompt versioning (templates in DB, per-org versions, seed script, API + UI)
+- [x] White-label branding (logo upload, dynamic primary color, sidebar branding, report injection)
 - [x] Manager vs consultant roles (3 roles: user, manager, admin — with RLS, team management, invitations)
 - [x] Usage-based billing with included quota (free tier, plan alignment, Stripe trial)
 - [x] 14-day free trial flow (Stripe-native trial_period_days, trial banner, auto-downgrade)
