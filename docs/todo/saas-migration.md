@@ -111,9 +111,9 @@
 - [x] Refactor `migrate_files_to_supabase.py:migrate()` — decomposed into 9 focused helpers (18 lines)
 
 ### Deployment
-- [ ] Deploy FastAPI to Render (Docker, connect to Supabase cloud)
-- [ ] Deploy Next.js to Render
-- [ ] Configure Stripe webhook URL to production API
+- [x] Deploy FastAPI to Render (Docker, connect to Supabase cloud)
+- [x] Deploy Next.js to Render
+- [x] Configure Stripe webhook URL to production API
 - [ ] Smoke test full pipeline in production
 
 ---
