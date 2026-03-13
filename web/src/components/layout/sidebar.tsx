@@ -14,6 +14,7 @@ import {
   Menu,
   Users,
   Shield,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -21,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuthStore } from "@/stores/auth-store";
+import { useBranding } from "@/components/providers/branding-provider";
 import { OrgSwitcher } from "./org-switcher";
 
 const iconMap = {
@@ -32,6 +34,7 @@ const iconMap = {
   CreditCard,
   Users,
   Shield,
+  MessageCircle,
 } as const;
 
 interface NavItem {
@@ -46,6 +49,7 @@ const navItems: NavItem[] = [
   { href: "/analyze", label: "Analyze", icon: "Search" },
   { href: "/transcripts", label: "Transcripts", icon: "FileText" },
   { href: "/reports", label: "Reports", icon: "FileBarChart" },
+  { href: "/coach", label: "Coach", icon: "MessageCircle" },
   { href: "/team", label: "Team", icon: "Users", roles: ["manager", "admin"] },
   { href: "/admin", label: "Admin", icon: "Shield", roles: ["admin"] },
   { href: "/settings", label: "Settings", icon: "Settings" },
@@ -106,81 +110,100 @@ function NavLinks({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: 
   );
 }
 
+function DefaultLogoSvg() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-primary">
+      <rect x="1" y="10" width="2" height="4" rx="0.5" fill="currentColor" opacity="0.6">
+        <animate
+          attributeName="height"
+          values="4;8;4"
+          dur="1.5s"
+          repeatCount="indefinite"
+          begin="0s"
+        />
+        <animate
+          attributeName="y"
+          values="10;6;10"
+          dur="1.5s"
+          repeatCount="indefinite"
+          begin="0s"
+        />
+      </rect>
+      <rect x="5" y="6" width="2" height="8" rx="0.5" fill="currentColor" opacity="0.8">
+        <animate
+          attributeName="height"
+          values="8;4;8"
+          dur="1.5s"
+          repeatCount="indefinite"
+          begin="0.2s"
+        />
+        <animate
+          attributeName="y"
+          values="6;10;6"
+          dur="1.5s"
+          repeatCount="indefinite"
+          begin="0.2s"
+        />
+      </rect>
+      <rect x="9" y="4" width="2" height="10" rx="0.5" fill="currentColor">
+        <animate
+          attributeName="height"
+          values="10;6;10"
+          dur="1.5s"
+          repeatCount="indefinite"
+          begin="0.4s"
+        />
+        <animate
+          attributeName="y"
+          values="4;8;4"
+          dur="1.5s"
+          repeatCount="indefinite"
+          begin="0.4s"
+        />
+      </rect>
+      <rect x="13" y="7" width="2" height="6" rx="0.5" fill="currentColor" opacity="0.7">
+        <animate
+          attributeName="height"
+          values="6;10;6"
+          dur="1.5s"
+          repeatCount="indefinite"
+          begin="0.6s"
+        />
+        <animate
+          attributeName="y"
+          values="7;3;7"
+          dur="1.5s"
+          repeatCount="indefinite"
+          begin="0.6s"
+        />
+      </rect>
+    </svg>
+  );
+}
+
 function Logo({ collapsed }: { collapsed: boolean }) {
+  const { logo_url, company_name } = useBranding();
+  const isCustomName = company_name !== "Pitch|Parse";
+
   return (
     <div className="flex h-16 items-center gap-3 border-b border-sidebar-border px-4">
       <div className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/15">
-        {/* Animated signal bars */}
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-primary">
-          <rect x="1" y="10" width="2" height="4" rx="0.5" fill="currentColor" opacity="0.6">
-            <animate
-              attributeName="height"
-              values="4;8;4"
-              dur="1.5s"
-              repeatCount="indefinite"
-              begin="0s"
-            />
-            <animate
-              attributeName="y"
-              values="10;6;10"
-              dur="1.5s"
-              repeatCount="indefinite"
-              begin="0s"
-            />
-          </rect>
-          <rect x="5" y="6" width="2" height="8" rx="0.5" fill="currentColor" opacity="0.8">
-            <animate
-              attributeName="height"
-              values="8;4;8"
-              dur="1.5s"
-              repeatCount="indefinite"
-              begin="0.2s"
-            />
-            <animate
-              attributeName="y"
-              values="6;10;6"
-              dur="1.5s"
-              repeatCount="indefinite"
-              begin="0.2s"
-            />
-          </rect>
-          <rect x="9" y="4" width="2" height="10" rx="0.5" fill="currentColor">
-            <animate
-              attributeName="height"
-              values="10;6;10"
-              dur="1.5s"
-              repeatCount="indefinite"
-              begin="0.4s"
-            />
-            <animate
-              attributeName="y"
-              values="4;8;4"
-              dur="1.5s"
-              repeatCount="indefinite"
-              begin="0.4s"
-            />
-          </rect>
-          <rect x="13" y="7" width="2" height="6" rx="0.5" fill="currentColor" opacity="0.7">
-            <animate
-              attributeName="height"
-              values="6;10;6"
-              dur="1.5s"
-              repeatCount="indefinite"
-              begin="0.6s"
-            />
-            <animate
-              attributeName="y"
-              values="7;3;7"
-              dur="1.5s"
-              repeatCount="indefinite"
-              begin="0.6s"
-            />
-          </rect>
-        </svg>
+        {logo_url ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img src={logo_url} alt={company_name} className="h-6 w-6 object-contain" />
+        ) : (
+          <DefaultLogoSvg />
+        )}
       </div>
       {!collapsed && (
         <span className="font-display text-base font-bold tracking-tight">
-          Pitch|<span className="text-primary">Parse</span>
+          {isCustomName ? (
+            company_name
+          ) : (
+            <>
+              Pitch|<span className="text-primary">Parse</span>
+            </>
+          )}
         </span>
       )}
     </div>

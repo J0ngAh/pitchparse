@@ -12,8 +12,28 @@ import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, RotateCcw, Download, Upload, Loader2, Bot } from "lucide-react";
+import {
+  Save,
+  RotateCcw,
+  Download,
+  Upload,
+  Loader2,
+  Bot,
+  FileCode,
+  History,
+  Trash2,
+  ImageIcon,
+} from "lucide-react";
 import { useCoachPrompt, useUpdateCoachPrompt } from "@/hooks/use-coach";
+import {
+  useActivePrompt,
+  usePromptVersions,
+  useCreatePromptVersion,
+  useRevertPromptVersion,
+} from "@/hooks/use-prompts";
+import { uploadLogo, removeLogo } from "@/lib/api/org";
+import { useQueryClient } from "@tanstack/react-query";
+import { useAuthStore } from "@/stores/auth-store";
 import type { AppConfig } from "@/types/api";
 
 /** Default brand color for the color picker (teal-600). Uses CSS hsl(168, 80%, 31%). */
@@ -141,6 +161,10 @@ export default function SettingsPage() {
             <Bot className="mr-1 h-3 w-3" />
             Coach AI
           </TabsTrigger>
+          <TabsTrigger value="prompts">
+            <FileCode className="mr-1 h-3 w-3" />
+            Prompts
+          </TabsTrigger>
         </TabsList>
 
         {/* Branding */}
@@ -218,6 +242,7 @@ export default function SettingsPage() {
                   />
                 </div>
               </div>
+              <LogoUploadSection logoUrl={config.branding?.logo_url ?? null} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -451,6 +476,11 @@ export default function SettingsPage() {
           <CoachPromptEditor />
         </TabsContent>
 
+        {/* Prompts */}
+        <TabsContent value="prompts">
+          <PromptsTab />
+        </TabsContent>
+
         {/* Coaching */}
         <TabsContent value="coaching">
           <Card className="border-border/50 bg-card/50">
@@ -603,5 +633,283 @@ function CoachPromptEditor() {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+const PROMPT_SLUGS = [
+  {
+    slug: "analyze",
+    label: "Analysis Prompt",
+    description: "System prompt for transcript analysis and scoring",
+  },
+  {
+    slug: "report",
+    label: "Report Prompt",
+    description: "System prompt for coaching report generation",
+  },
+  {
+    slug: "coach",
+    label: "Coach Prompt",
+    description: "System prompt for the interactive AI coach",
+  },
+] as const;
+
+function PromptsTab() {
+  const role = useAuthStore((s) => s.role);
+  const canEdit = role === "manager" || role === "admin";
+
+  return (
+    <div className="space-y-4">
+      {PROMPT_SLUGS.map(({ slug, label, description }) => (
+        <PromptEditor
+          key={slug}
+          slug={slug}
+          label={label}
+          description={description}
+          canEdit={canEdit}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PromptEditor({
+  slug,
+  label,
+  description,
+  canEdit,
+}: {
+  slug: string;
+  label: string;
+  description: string;
+  canEdit: boolean;
+}) {
+  const { data: activePrompt, isLoading } = useActivePrompt(slug);
+  const [showHistory, setShowHistory] = useState(false);
+  const { data: versions } = usePromptVersions(slug, showHistory);
+  const createVersion = useCreatePromptVersion(slug);
+  const revertVersion = useRevertPromptVersion(slug);
+  const [localBody, setLocalBody] = useState<string | null>(null);
+
+  const currentBody = localBody ?? activePrompt?.body ?? "";
+  const hasChanges = localBody !== null && localBody !== activePrompt?.body;
+
+  const handleSave = async () => {
+    if (!localBody) return;
+    try {
+      await createVersion.mutateAsync(localBody);
+      setLocalBody(null);
+      toast.success(`${label} saved as new version!`);
+    } catch {
+      toast.error(`Failed to save ${label.toLowerCase()}`);
+    }
+  };
+
+  const handleRevert = async (version: number) => {
+    try {
+      await revertVersion.mutateAsync(version);
+      setLocalBody(null);
+      toast.success(`Reverted to version ${version}`);
+    } catch {
+      toast.error("Failed to revert");
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Card className="border-border/50 bg-card/50">
+        <CardContent className="flex items-center gap-3 pt-6 text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="text-sm">Loading {label.toLowerCase()}...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="border-border/50 bg-card/50">
+      <CardContent className="space-y-4 pt-6">
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <Label>{label}</Label>
+              <p className="text-xs text-muted-foreground">{description}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {activePrompt?.is_default && (
+                <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                  Default
+                </span>
+              )}
+              {activePrompt && !activePrompt.is_default && (
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  Custom v{activePrompt.version}
+                </span>
+              )}
+            </div>
+          </div>
+          <Textarea
+            value={currentBody}
+            onChange={(e) => setLocalBody(e.target.value)}
+            placeholder={`Enter custom ${label.toLowerCase()}...`}
+            rows={12}
+            className="font-mono text-xs"
+            readOnly={!canEdit}
+          />
+        </div>
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={handleSave}
+              disabled={!hasChanges || createVersion.isPending}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              {createVersion.isPending ? (
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              ) : (
+                <Save className="mr-1 h-3 w-3" />
+              )}
+              Save
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setShowHistory(!showHistory)}>
+              <History className="mr-1 h-3 w-3" />
+              {showHistory ? "Hide History" : "History"}
+            </Button>
+          </div>
+        )}
+        {showHistory && versions && versions.length > 0 && (
+          <div className="space-y-2 border-t border-border/50 pt-4">
+            <Label className="text-xs text-muted-foreground">Version History</Label>
+            <div className="max-h-48 space-y-1 overflow-y-auto">
+              {versions.map((v) => (
+                <div
+                  key={v.id}
+                  className="flex items-center justify-between rounded-md border border-border/50 px-3 py-2 text-xs"
+                >
+                  <div>
+                    <span className="font-mono font-medium">v{v.version}</span>
+                    <span className="ml-2 text-muted-foreground">
+                      {new Date(v.created_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {canEdit && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => handleRevert(v.version)}
+                      disabled={revertVersion.isPending}
+                    >
+                      <RotateCcw className="mr-1 h-3 w-3" />
+                      Revert
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {showHistory && versions && versions.length === 0 && (
+          <p className="text-xs text-muted-foreground">
+            No custom versions yet. Save a change to create the first version.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function LogoUploadSection({ logoUrl }: { logoUrl: string | null }) {
+  const [uploading, setUploading] = useState(false);
+  const [removing, setRemoving] = useState(false);
+  const queryClient = useQueryClient();
+  const role = useAuthStore((s) => s.role);
+  const canEdit = role === "manager" || role === "admin";
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 512 * 1024) {
+      toast.error("Logo must be under 512KB");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await uploadLogo(file);
+      queryClient.invalidateQueries({ queryKey: ["org-config"] });
+      toast.success("Logo uploaded!");
+    } catch {
+      toast.error("Failed to upload logo");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const handleRemove = async () => {
+    setRemoving(true);
+    try {
+      await removeLogo();
+      queryClient.invalidateQueries({ queryKey: ["org-config"] });
+      toast.success("Logo removed");
+    } catch {
+      toast.error("Failed to remove logo");
+    } finally {
+      setRemoving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <Label>Logo</Label>
+      <p className="text-xs text-muted-foreground">
+        Upload your organization logo (PNG, JPG, or SVG, max 512KB)
+      </p>
+      <div className="flex items-center gap-4">
+        {logoUrl ? (
+          <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-border/50 bg-background p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={logoUrl} alt="Org logo" className="max-h-12 max-w-12 object-contain" />
+          </div>
+        ) : (
+          <div className="flex h-16 w-16 items-center justify-center rounded-lg border border-dashed border-border/50 bg-background">
+            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+          </div>
+        )}
+        {canEdit && (
+          <div className="flex items-center gap-2">
+            <label>
+              <Button variant="outline" size="sm" type="button" disabled={uploading}>
+                {uploading ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Upload className="mr-1 h-3 w-3" />
+                )}
+                {logoUrl ? "Replace" : "Upload"}
+              </Button>
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/svg+xml"
+                className="hidden"
+                onChange={handleUpload}
+              />
+            </label>
+            {logoUrl && (
+              <Button variant="outline" size="sm" onClick={handleRemove} disabled={removing}>
+                {removing ? (
+                  <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-1 h-3 w-3" />
+                )}
+                Remove
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
   );
 }

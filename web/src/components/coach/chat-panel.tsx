@@ -2,70 +2,23 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useConversation, useCreateConversation, useSendMessage } from "@/hooks/use-coach";
-import type { MessageResponse } from "@/types/api";
+import { MessageBubble, StreamingBubble, TypingIndicator } from "@/components/coach/chat-message";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Loader2, Bot, User } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { Send, Loader2, Bot, ExternalLink } from "lucide-react";
+import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 interface ChatPanelProps {
   analysisId: string;
-}
-
-function MessageBubble({ message }: { message: MessageResponse }) {
-  const isUser = message.role === "user";
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`flex gap-3 ${isUser ? "flex-row-reverse" : "flex-row"}`}
-    >
-      <div
-        className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
-          isUser ? "bg-primary/20 text-primary" : "bg-violet-500/20 text-violet-400"
-        }`}
-      >
-        {isUser ? <User className="h-3.5 w-3.5" /> : <Bot className="h-3.5 w-3.5" />}
-      </div>
-      <div
-        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-          isUser ? "bg-primary/10 text-foreground" : "bg-card border border-border text-foreground"
-        }`}
-      >
-        <div className="whitespace-pre-wrap">{message.content}</div>
-      </div>
-    </motion.div>
-  );
-}
-
-function StreamingBubble({ content }: { content: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="flex gap-3"
-    >
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-violet-400">
-        <Bot className="h-3.5 w-3.5" />
-      </div>
-      <div className="max-w-[80%] rounded-2xl border border-border bg-card px-4 py-2.5 text-sm leading-relaxed text-foreground">
-        <div className="whitespace-pre-wrap">
-          {content}
-          <span className="ml-0.5 inline-block h-4 w-1.5 animate-pulse rounded-sm bg-violet-400" />
-        </div>
-      </div>
-    </motion.div>
-  );
 }
 
 export function ChatPanel({ analysisId }: ChatPanelProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const createConversation = useCreateConversation();
   const { data: conversation } = useConversation(conversationId);
@@ -157,26 +110,13 @@ export function ChatPanel({ analysisId }: ChatPanelProps) {
         </AnimatePresence>
 
         {isStreaming && streamingContent && <StreamingBubble content={streamingContent} />}
-
-        {isStreaming && !streamingContent && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-500/20 text-violet-400">
-              <Bot className="h-3.5 w-3.5" />
-            </div>
-            <div className="flex items-center gap-1.5 rounded-2xl border border-border bg-card px-4 py-2.5">
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:0ms]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:150ms]" />
-              <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:300ms]" />
-            </div>
-          </motion.div>
-        )}
+        {isStreaming && !streamingContent && <TypingIndicator />}
       </div>
 
-      {/* Input area */}
+      {/* Footer with input and link */}
       <div className="border-t border-border p-3">
         <div className="flex gap-2">
           <Textarea
-            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -197,6 +137,15 @@ export function ChatPanel({ analysisId }: ChatPanelProps) {
               <Send className="h-4 w-4" />
             )}
           </Button>
+        </div>
+        <div className="mt-2 flex justify-end">
+          <Link
+            href={`/coach?analysis=${analysisId}`}
+            className="inline-flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-primary"
+          >
+            <ExternalLink className="h-3 w-3" />
+            Open full coaching view
+          </Link>
         </div>
       </div>
     </Card>

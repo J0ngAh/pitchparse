@@ -262,12 +262,34 @@ export interface ChatMessageRequest {
 
 // ---------- Config ----------
 
+// ---------- Prompt Templates ----------
+
+export interface PromptTemplateResponse {
+  id: string;
+  org_id: string | null;
+  slug: string;
+  version: number;
+  body: string;
+  created_by: string | null;
+  created_at: string;
+  is_default: boolean;
+}
+
+export interface PromptTemplateCreate {
+  body: string;
+}
+
+export interface PromptRevertRequest {
+  version: number;
+}
+
 export interface AppConfig {
   branding: {
     company_name: string;
     tagline: string;
     page_title: string;
     primary_color: string;
+    logo_url: string | null;
   };
   scoring: {
     kpis: KpiConfig[];
