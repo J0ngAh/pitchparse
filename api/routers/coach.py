@@ -187,24 +187,8 @@ async def get_conversation(conversation_id: str, user: CurrentUser):
     return ConversationDetail(**conv_data)
 
 
-def _load_chat_context(
-    conversation_id: str,
-    user_message: str,
-    user: CurrentUser,
-    db: Client,
-) -> tuple[CoachDeps, Agent[CoachDeps, str], list[dict]]:
-    """Load everything needed for a coach chat turn.
-
-    Verifies conversation ownership, persists the user message,
-    loads message history and analysis context, and builds the
-    agent with org-specific prompt.
-
-    Returns:
-        Tuple of (deps, agent, history).
-
-    Raises:
-        HTTPException: If conversation not found.
-    """
+def _verify_conversation(db: Client, conversation_id: str, user: CurrentUser) -> dict:
+    """Verify conversation ownership and return its data."""
     conv_result = (
         db.table("conversations")
         .select("*")
@@ -219,8 +203,11 @@ def _load_chat_context(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation not found",
         )
-    conv = row_as_dict(conv_result)
+    return row_as_dict(conv_result)
 
+
+def _save_and_load_history(db: Client, conversation_id: str, user_message: str) -> list[dict]:
+    """Persist user message and return prior history."""
     db.table("messages").insert(
         {
             "conversation_id": conversation_id,
@@ -237,8 +224,13 @@ def _load_chat_context(
         .execute()
     )
     # Exclude the just-inserted user message (it's the current prompt)
-    history = rows_as_dicts(msg_result)[:-1]
+    return rows_as_dicts(msg_result)[:-1]
 
+
+def _build_deps_and_agent(
+    db: Client, conv: dict, user: CurrentUser
+) -> tuple[CoachDeps, Agent[CoachDeps, str]]:
+    """Build CoachDeps and agent from conversation and user context."""
     analysis_context = None
     if conv.get("analysis_id"):
         analysis_result = (
@@ -264,12 +256,12 @@ def _load_chat_context(
     org_result = (
         db.table("organizations").select("coach_prompt").eq("id", user["org_id"]).single().execute()
     )
-    custom_prompt = row_as_dict(org_result).get("coach_prompt") if org_result.data else None
+    custom = row_as_dict(org_result).get("coach_prompt") if org_result.data else None
 
     settings = get_settings()
-    agent = build_coach_agent(settings.anthropic_api_key, custom_prompt=custom_prompt)
+    agent = build_coach_agent(settings.anthropic_api_key, custom_prompt=custom)
 
-    return deps, agent, history
+    return deps, agent
 
 
 async def _make_sse_stream(
@@ -337,7 +329,9 @@ async def send_message(
         )
 
     db = get_supabase_client()
-    deps, agent, history = _load_chat_context(conversation_id, req.content, user, db)
+    conv = _verify_conversation(db, conversation_id, user)
+    history = _save_and_load_history(db, conversation_id, req.content)
+    deps, agent = _build_deps_and_agent(db, conv, user)
 
     return StreamingResponse(
         _make_sse_stream(db, conversation_id, agent, deps, req.content, history),

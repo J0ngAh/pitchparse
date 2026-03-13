@@ -66,19 +66,7 @@ async def list_analyses(
     rating: str | None = None,
     limit: int = 10,
 ) -> str:
-    """List analyses for the organization, with optional filters.
-
-    Use this to browse and find analyses. Returns summary info only —
-    use get_analysis_detail for full data on a specific analysis.
-
-    Args:
-        ctx: Run context with org and user info.
-        consultant_name: Filter by consultant name (partial match).
-        min_score: Minimum overall score (0-100).
-        max_score: Maximum overall score (0-100).
-        rating: Filter by rating (e.g. "Excellent", "Good", "Needs Improvement").
-        limit: Max results to return (default 10, max 25).
-    """
+    """List analyses with optional filters. Use get_analysis_detail for full data."""
     db: Client = ctx.deps.db
     limit = min(limit, 25)
 
@@ -90,7 +78,6 @@ async def list_analyses(
         .order("created_at", desc=True)
         .limit(limit)
     )
-
     query = _apply_user_filter(query, ctx)
 
     if consultant_name:
@@ -102,12 +89,9 @@ async def list_analyses(
     if rating:
         query = query.eq("rating", rating)
 
-    result = query.execute()
-    rows = _safe_rows(result)
-
+    rows = _safe_rows(query.execute())
     if not rows:
         return "No analyses found matching your criteria."
-
     return _format_analyses_table(rows)
 
 
@@ -296,18 +280,35 @@ def _count_ratings(rows: list[dict[str, Any]]) -> dict[str, int]:
     return ratings
 
 
+def _format_team_stats(rows: list[dict[str, Any]], scores: list[int], scope: str, days: int) -> str:
+    avg = sum(scores) / len(scores) if scores else 0
+    below_60 = len([s for s in scores if s < 60])
+    ratings = _count_ratings(rows)
+    kpi_avgs = _aggregate_kpi_scores(rows)
+    top_kpi = max(kpi_avgs, key=kpi_avgs.get, default=None) if kpi_avgs else None  # type: ignore[arg-type]
+    bottom_kpi = min(kpi_avgs, key=kpi_avgs.get, default=None) if kpi_avgs else None  # type: ignore[arg-type]
+
+    lines = [
+        f"**{scope.title()} Stats** (last {days} days):\n",
+        f"- **Total calls analyzed:** {len(rows)}",
+        f"- **Average score:** {avg:.0f}/100",
+        f"- **Calls below 60:** {below_60}",
+    ]
+    if ratings:
+        rating_str = ", ".join(f"{k}: {v}" for k, v in sorted(ratings.items()))
+        lines.append(f"- **Ratings:** {rating_str}")
+    if top_kpi:
+        lines.append(f"- **Strongest KPI:** {top_kpi} (avg {kpi_avgs[top_kpi]:.1f}/5)")
+    if bottom_kpi:
+        lines.append(f"- **Weakest KPI:** {bottom_kpi} (avg {kpi_avgs[bottom_kpi]:.1f}/5)")
+    return "\n".join(lines)
+
+
 async def get_team_stats(
     ctx: RunContext[CoachDeps],
     days: int = 30,
 ) -> str:
-    """Get aggregate team performance metrics.
-
-    Users see only their own stats. Managers/admins see the full org.
-
-    Args:
-        ctx: Run context with org and user info.
-        days: Number of days to look back (default 30).
-    """
+    """Get aggregate team performance metrics. Users see own stats only."""
     db: Client = ctx.deps.db
     from datetime import UTC, datetime, timedelta
 
@@ -321,39 +322,14 @@ async def get_team_stats(
         .gte("created_at", cutoff)
     )
     query = _apply_user_filter(query, ctx)
-
-    result = query.execute()
-    rows = _safe_rows(result)
+    rows = _safe_rows(query.execute())
 
     if not rows:
         return f"No completed analyses found in the last {days} days."
 
-    scores: list[int] = [r["overall_score"] for r in rows if r.get("overall_score") is not None]
-    below_60 = len([s for s in scores if s < 60])
-    avg = sum(scores) / len(scores) if scores else 0
-
-    ratings = _count_ratings(rows)
-    kpi_avgs = _aggregate_kpi_scores(rows)
-    top_kpi = max(kpi_avgs, key=kpi_avgs.get, default=None) if kpi_avgs else None  # type: ignore[arg-type]
-    bottom_kpi = min(kpi_avgs, key=kpi_avgs.get, default=None) if kpi_avgs else None  # type: ignore[arg-type]
-
+    scores = [r["overall_score"] for r in rows if r.get("overall_score") is not None]
     scope = "your" if ctx.deps.user_role == "user" else "team"
-    lines = [
-        f"**{scope.title()} Stats** (last {days} days):\n",
-        f"- **Total calls analyzed:** {len(rows)}",
-        f"- **Average score:** {avg:.0f}/100",
-        f"- **Calls below 60:** {below_60}",
-    ]
-
-    if ratings:
-        rating_str = ", ".join(f"{k}: {v}" for k, v in sorted(ratings.items()))
-        lines.append(f"- **Ratings:** {rating_str}")
-    if top_kpi:
-        lines.append(f"- **Strongest KPI:** {top_kpi} (avg {kpi_avgs[top_kpi]:.1f}/5)")
-    if bottom_kpi:
-        lines.append(f"- **Weakest KPI:** {bottom_kpi} (avg {kpi_avgs[bottom_kpi]:.1f}/5)")
-
-    return "\n".join(lines)
+    return _format_team_stats(rows, scores, scope, days)
 
 
 def _collect_themes(
@@ -381,16 +357,7 @@ async def search_coaching_patterns(
     priority: int | None = None,
     limit: int = 10,
 ) -> str:
-    """Find recurring coaching themes across analyses.
-
-    Identifies common improvement areas across multiple calls.
-
-    Args:
-        ctx: Run context with org and user info.
-        consultant_name: Filter to a specific consultant.
-        priority: Filter by coaching priority (1=highest).
-        limit: Max analyses to scan (default 10, max 25).
-    """
+    """Find recurring coaching themes across recent analyses."""
     db: Client = ctx.deps.db
     limit = min(limit, 25)
 
