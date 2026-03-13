@@ -114,7 +114,7 @@
 - [x] Deploy FastAPI to Render (Docker, connect to Supabase cloud)
 - [x] Deploy Next.js to Render
 - [x] Configure Stripe webhook URL to production API
-- [ ] Smoke test full pipeline in production
+- [x] Smoke test full pipeline in production
 
 ---
 
