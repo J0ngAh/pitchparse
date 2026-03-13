@@ -12,6 +12,7 @@ from pydantic_ai.providers.anthropic import AnthropicProvider
 
 from api.config import get_settings
 from api.services.analysis_service import _read_command_body
+from supabase import Client  # type: ignore[attr-defined]
 
 logger = structlog.get_logger()
 
@@ -20,8 +21,10 @@ logger = structlog.get_logger()
 class CoachDeps:
     org_id: str
     user_id: str
-    analysis_id: str | None
-    analysis_context: str | None
+    user_role: str  # "user" | "manager" | "admin"
+    db: Client
+    analysis_id: str | None = None
+    analysis_context: str | None = None
 
 
 def _build_coach_prompt() -> str:
@@ -96,11 +99,10 @@ def build_coach_agent(
 
     Args:
         api_key: Anthropic API key.
-        model: Model ID to use.
+        model: Model ID to use. Defaults to Sonnet 4.6 for conversational quality.
         custom_prompt: Org-specific coach prompt from DB. Falls back to default.
     """
-    settings = get_settings()
-    model = model or settings.claude_model
+    model = model or "claude-sonnet-4-6-20250514"
     base_prompt = custom_prompt or _build_coach_prompt()
 
     model_instance = AnthropicModel(
@@ -123,6 +125,25 @@ def build_coach_agent(
                 "Use this data to ground your coaching in specific evidence from the call."
             )
         return ""
+
+    # Register agent tools
+    from api.services.coach_tools import (
+        compare_consultants,
+        get_analysis_detail,
+        get_org_config,
+        get_team_stats,
+        get_transcript_excerpt,
+        list_analyses,
+        search_coaching_patterns,
+    )
+
+    agent.tool(list_analyses)
+    agent.tool(get_analysis_detail)
+    agent.tool(get_transcript_excerpt)
+    agent.tool(compare_consultants)
+    agent.tool(get_team_stats)
+    agent.tool(search_coaching_patterns)
+    agent.tool(get_org_config)
 
     return agent
 

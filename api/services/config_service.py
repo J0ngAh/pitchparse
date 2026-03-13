@@ -9,6 +9,7 @@ DEFAULT_CONFIG: dict = {
         "tagline": "Every call, parsed. Every rep, sharper.",
         "page_title": "Pitch|Parse",
         "primary_color": "#0D9488",
+        "logo_url": None,
     },
     "scoring": {
         "kpis": [

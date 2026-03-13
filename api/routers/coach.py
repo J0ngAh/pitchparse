@@ -258,6 +258,8 @@ async def send_message(
     deps = CoachDeps(
         org_id=user["org_id"],
         user_id=user["user_id"],
+        user_role=user["role"],
+        db=db,
         analysis_id=conv.get("analysis_id"),
         analysis_context=analysis_context,
     )
