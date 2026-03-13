@@ -78,7 +78,7 @@ async def create_checkout(req: CheckoutRequest, user: CurrentUser):
     subscription_data = {"trial_period_days": 14} if is_first_subscription else {}
 
     session = stripe.v1.checkout.sessions.create(
-        params={
+        params={  # type: ignore[arg-type]
             "customer": customer_id,
             "mode": "subscription",
             "line_items": [{"price": price_id, "quantity": 1}],
