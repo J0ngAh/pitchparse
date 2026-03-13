@@ -120,10 +120,10 @@
 
 ## Phase 2 Backlog (after first revenue)
 
-- [ ] Local JWT verification (PyJWT + Supabase JWKs endpoint — avoids network call per auth'd request)
+- [x] Local JWT verification (PyJWT + Supabase JWKs endpoint — avoids network call per auth'd request)
 - [ ] Prompt versioning (templates in DB)
 - [ ] White-label branding (logos, colors, subdomain routing)
-- [ ] Manager vs consultant roles (2 roles only)
+- [x] Manager vs consultant roles (3 roles: user, manager, admin — with RLS, team management, invitations)
 - [ ] Usage-based billing with included quota
 - [ ] 14-day free trial flow
 - [ ] Scoring consistency: temperature=0, pin model versions, benchmark test set
