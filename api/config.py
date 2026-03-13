@@ -26,6 +26,8 @@ class Settings(BaseSettings):
     cors_origins: str = "http://localhost:8501,http://localhost:3000"
     inngest_event_key: str = ""  # Only for Inngest Cloud (prod)
     inngest_signing_key: str = ""  # Only for Inngest Cloud (prod)
+    claude_model: str = "claude-sonnet-4-5-20250514"
+    claude_temperature: float = 0.0
 
     model_config = SettingsConfigDict(env_prefix="", case_sensitive=False)
 

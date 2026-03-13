@@ -19,8 +19,9 @@ logger = structlog.get_logger()
 router = APIRouter()
 
 PLAN_CONFIG = {
-    "starter": {"quota": 50, "users": 1},
-    "team": {"quota": 200, "users": 5},
+    "free": {"quota": 5, "users": 1},
+    "starter": {"quota": 50, "users": 5},
+    "team": {"quota": 200, "users": 25},
 }
 
 
@@ -46,7 +47,7 @@ async def create_checkout(req: CheckoutRequest, user: CurrentUser):
     # Get or create Stripe customer
     org_result = (
         db.table("organizations")
-        .select("id, name, stripe_customer_id")
+        .select("id, name, stripe_customer_id, stripe_subscription_id")
         .eq("id", user["org_id"])
         .single()
         .execute()
@@ -72,16 +73,20 @@ async def create_checkout(req: CheckoutRequest, user: CurrentUser):
 
     price_id = _get_price_id(req.plan)
 
-    session = stripe.v1.checkout.sessions.create(
-        params={
-            "customer": customer_id,
-            "mode": "subscription",
-            "line_items": [{"price": price_id, "quantity": 1}],
-            "success_url": req.success_url,
-            "cancel_url": req.cancel_url,
-            "metadata": {"org_id": org["id"], "plan": req.plan},
-        }
-    )
+    params: dict = {
+        "customer": customer_id,
+        "mode": "subscription",
+        "line_items": [{"price": price_id, "quantity": 1}],
+        "success_url": req.success_url,
+        "cancel_url": req.cancel_url,
+        "metadata": {"org_id": org["id"], "plan": req.plan},
+    }
+
+    # 14-day free trial for first-time subscribers only
+    if not org.get("stripe_subscription_id"):
+        params["subscription_data"] = {"trial_period_days": 14}
+
+    session = stripe.v1.checkout.sessions.create(params=params)
 
     return CheckoutResponse(checkout_url=session.url or "")
 
@@ -100,6 +105,7 @@ async def get_subscription(user: CurrentUser):
     org = row_as_dict(org_result)
 
     current_period_end = None
+    trial_ends_at = None
     status = "active"
 
     if org.get("stripe_subscription_id"):
@@ -108,6 +114,8 @@ async def get_subscription(user: CurrentUser):
             sub = stripe.v1.subscriptions.retrieve(org["stripe_subscription_id"])
             status = sub.status
             current_period_end = getattr(sub, "current_period_end", None)
+            if sub.status == "trialing":
+                trial_ends_at = getattr(sub, "trial_end", None)
         except Exception:
             pass
 
@@ -117,6 +125,7 @@ async def get_subscription(user: CurrentUser):
         analysis_quota=org["analysis_quota"],
         analysis_count=org["analysis_count"],
         current_period_end=current_period_end,
+        trial_ends_at=trial_ends_at,
     )
 
 
@@ -189,7 +198,7 @@ def _handle_subscription_update(db, subscription):
     org_id = rows_as_dicts(org_result)[0]["id"]
     status = subscription.get("status")
 
-    if status == "active":
+    if status in ("active", "trialing"):
         db.table("organizations").update(
             {
                 "stripe_subscription_id": subscription.get("id"),
@@ -237,8 +246,8 @@ def _handle_subscription_cancelled(db, subscription):
     org_id = rows_as_dicts(org_result)[0]["id"]
     db.table("organizations").update(
         {
-            "plan": "starter",
+            "plan": "free",
             "stripe_subscription_id": None,
-            "analysis_quota": 50,
+            "analysis_quota": 5,
         }
     ).eq("id", org_id).execute()

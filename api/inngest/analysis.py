@@ -63,7 +63,7 @@ def run_analysis_fn(ctx: inngest.ContextSync) -> dict:
     analysis_id = str(ctx.event.data["analysis_id"])
     org_id = str(ctx.event.data["org_id"])
     transcript_id = str(ctx.event.data["transcript_id"])
-    model = str(ctx.event.data.get("model", "claude-sonnet-4-6"))
+    model = str(ctx.event.data.get("model", "")) or None
     focus_raw = ctx.event.data.get("focus")
     focus = str(focus_raw) if focus_raw is not None else None
     org_config_val = ctx.event.data.get("org_config")

@@ -63,7 +63,11 @@ async def signup(req: SignupRequest, request: Request):
             ).execute()
         else:
             # New org creator — gets manager role
-            org_result = db.table("organizations").insert({"name": req.org_name}).execute()
+            org_result = (
+                db.table("organizations")
+                .insert({"name": req.org_name, "plan": "free", "analysis_quota": 5})
+                .execute()
+            )
             org = rows_as_dicts(org_result)[0]
             org_id = org["id"]
             role = "manager"

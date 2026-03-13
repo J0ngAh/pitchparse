@@ -162,6 +162,7 @@ class SubscriptionResponse(BaseModel):
     analysis_quota: int
     analysis_count: int
     current_period_end: datetime | None = None
+    trial_ends_at: datetime | None = None
 
 
 # ---------- Team / Invitations ----------

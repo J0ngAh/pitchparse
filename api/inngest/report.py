@@ -64,7 +64,7 @@ def generate_report_fn(ctx: inngest.ContextSync) -> dict:
     report_id = str(ctx.event.data["report_id"])
     analysis_id = str(ctx.event.data["analysis_id"])
     org_id = str(ctx.event.data["org_id"])
-    model = str(ctx.event.data.get("model", "claude-sonnet-4-6"))
+    model = str(ctx.event.data.get("model", "")) or get_settings().claude_model
 
     def fetch_analysis() -> dict:
         db = get_supabase_client()

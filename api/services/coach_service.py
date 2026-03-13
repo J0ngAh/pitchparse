@@ -10,6 +10,7 @@ from pydantic_ai.messages import ModelMessage, ModelRequest, ModelResponse
 from pydantic_ai.models.anthropic import AnthropicModel
 from pydantic_ai.providers.anthropic import AnthropicProvider
 
+from api.config import get_settings
 from api.services.analysis_service import _read_command_body
 
 logger = structlog.get_logger()
@@ -88,7 +89,7 @@ def _build_analysis_context(analysis_data: dict) -> str:
 
 def build_coach_agent(
     api_key: str,
-    model: str = "claude-sonnet-4-6",
+    model: str | None = None,
     custom_prompt: str | None = None,
 ) -> Agent[CoachDeps, str]:
     """Create a PydanticAI agent for coaching conversations.
@@ -98,6 +99,8 @@ def build_coach_agent(
         model: Model ID to use.
         custom_prompt: Org-specific coach prompt from DB. Falls back to default.
     """
+    settings = get_settings()
+    model = model or settings.claude_model
     base_prompt = custom_prompt or _build_coach_prompt()
 
     model_instance = AnthropicModel(
@@ -167,7 +170,7 @@ async def stream_coach_response(
         user_message,
         deps=deps,
         message_history=message_history,
-        model_settings={"max_tokens": 4096},
+        model_settings={"max_tokens": 4096, "temperature": get_settings().claude_temperature},
     ) as result:
         async for chunk in result.stream_text(delta=True):
             yield chunk

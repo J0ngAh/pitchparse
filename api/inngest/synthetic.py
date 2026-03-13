@@ -74,7 +74,7 @@ def generate_synthetic_fn(ctx: inngest.ContextSync) -> dict:
     consultant_name = str(consultant_raw) if consultant_raw is not None else None
     prospect_raw = ctx.event.data.get("prospect_name")
     prospect_name = str(prospect_raw) if prospect_raw is not None else None
-    model = str(ctx.event.data.get("model", "claude-sonnet-4-6"))
+    model = str(ctx.event.data.get("model", "")) or None
     org_config_val = ctx.event.data.get("org_config")
     org_config_raw: dict | None = org_config_val if isinstance(org_config_val, dict) else None
 

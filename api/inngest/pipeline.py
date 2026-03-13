@@ -39,7 +39,9 @@ def full_pipeline_fn(ctx: inngest.ContextSync) -> dict:
     """Orchestrate analysis → report generation as a single workflow."""
     analysis_id = str(ctx.event.data["analysis_id"])
     org_id = str(ctx.event.data["org_id"])
-    report_model = str(ctx.event.data.get("report_model", "claude-sonnet-4-6"))
+    from api.config import get_settings
+
+    report_model = str(ctx.event.data.get("report_model", "")) or get_settings().claude_model
     created_by = ctx.event.data.get("created_by")
 
     # Trigger analysis (already created as pending by the router)

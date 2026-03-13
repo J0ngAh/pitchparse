@@ -108,11 +108,15 @@ def build_system_prompt(config: dict | None = None) -> str:
 def run_analysis(
     transcript_text: str,
     api_key: str,
-    model: str = "claude-sonnet-4-6",
+    model: str | None = None,
     focus: str | None = None,
     config: dict | None = None,
 ) -> AnalysisResult:
     """Run analysis via PydanticAI structured output. Returns AnalysisResult."""
+    from api.config import get_settings
+
+    settings = get_settings()
+    model = model or settings.claude_model
     system_prompt = build_system_prompt(config)
 
     user_message = (
@@ -138,7 +142,7 @@ def run_analysis(
 
     result = agent.run_sync(
         user_message,
-        model_settings={"max_tokens": 32000},
+        model_settings={"max_tokens": 32000, "temperature": settings.claude_temperature},
     )
     return result.output
 
@@ -269,9 +273,13 @@ def _build_report_user_message(analysis_text: str) -> str:
 def run_report_generation(
     analysis_text: str,
     api_key: str,
-    model: str = "claude-sonnet-4-6",
+    model: str | None = None,
 ) -> str:
     """Generate a coaching report synchronously. Returns HTML string."""
+    from api.config import get_settings
+
+    settings = get_settings()
+    model = model or settings.claude_model
     system_prompt = _build_report_system_prompt()
     user_message = _build_report_user_message(analysis_text)
 
@@ -279,6 +287,7 @@ def run_report_generation(
     message = client.messages.create(
         model=model,
         max_tokens=32000,
+        temperature=settings.claude_temperature,
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
     )

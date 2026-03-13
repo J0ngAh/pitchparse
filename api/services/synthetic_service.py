@@ -80,10 +80,15 @@ def generate_synthetic(
     scenario: str | None = None,
     consultant_name: str | None = None,
     prospect_name: str | None = None,
-    model: str = "claude-sonnet-4-6",
+    model: str | None = None,
     config: dict | None = None,
 ) -> str:
     """Generate a single synthetic transcript. Returns the transcript text."""
+    from api.config import get_settings
+
+    settings = get_settings()
+    model = model or settings.claude_model
+
     if quality == "random" or quality not in QUALITY_LEVELS:
         quality = random.choice(QUALITY_LEVELS)
 
@@ -97,6 +102,7 @@ def generate_synthetic(
     message = client.messages.create(
         model=model,
         max_tokens=16000,
+        temperature=settings.claude_temperature,
         system=system_prompt,
         messages=[{"role": "user", "content": user_message}],
     )
