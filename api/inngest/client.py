@@ -1,4 +1,4 @@
-"""Inngest client singleton for PitchParse."""
+"""Inngest client singleton for Pitch|Parse."""
 
 import inngest
 

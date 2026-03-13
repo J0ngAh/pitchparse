@@ -1,4 +1,4 @@
--- PitchParse Phase 2: RBAC + created_by tracking
+-- Pitch|Parse Phase 2: RBAC + created_by tracking
 -- Adds role-based access control, ownership tracking, and invitation system
 
 -- ============================================================

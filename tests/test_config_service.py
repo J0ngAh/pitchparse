@@ -40,7 +40,7 @@ class TestDeepMerge:
 class TestGetOrgConfig:
     def test_none_returns_defaults(self):
         result = get_org_config(None)
-        assert result["branding"]["company_name"] == "PitchParse"
+        assert result["branding"]["company_name"] == "Pitch|Parse"
         # Should be a copy, not the same object
         assert result is not DEFAULT_CONFIG
 

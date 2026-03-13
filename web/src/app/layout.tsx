@@ -19,7 +19,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "PitchParse",
+  title: "Pitch|Parse",
   description: "Every call, parsed. Every rep, sharper.",
 };
 

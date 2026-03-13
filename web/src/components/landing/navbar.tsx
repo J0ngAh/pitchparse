@@ -103,7 +103,7 @@ export function Navbar() {
             </svg>
           </div>
           <span className="font-display text-base font-bold tracking-tight">
-            Pitch<span className="text-primary">Parse</span>
+            Pitch|<span className="text-primary">Parse</span>
           </span>
         </Link>
 

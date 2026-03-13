@@ -165,7 +165,7 @@ export default function DashboardPage() {
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/15">
               <Zap className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="font-display text-xl font-bold">Welcome to PitchParse</h2>
+            <h2 className="font-display text-xl font-bold">Welcome to Pitch|Parse</h2>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
               Start by uploading a sales call transcript or generating a synthetic one. We&apos;ll
               analyze it and give you actionable coaching insights.

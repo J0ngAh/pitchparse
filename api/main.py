@@ -1,4 +1,4 @@
-"""FastAPI application entry point for PitchParse API."""
+"""FastAPI application entry point for Pitch|Parse API."""
 
 import logging
 import re
@@ -52,7 +52,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="PitchParse API",
+    title="Pitch|Parse API",
     description="AI-powered sales call quality assurance",
     version="1.0.0",
     lifespan=lifespan,

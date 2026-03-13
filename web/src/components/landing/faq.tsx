@@ -37,10 +37,10 @@ const faqs: { question: string; answer: ReactNode }[] = [
       "Start with a free trial — 5 calls, no credit card required. When you upgrade, billing is handled through Stripe with monthly or annual plans. Annual plans save you 2 months. You can cancel anytime.",
   },
   {
-    question: "Can I use PitchParse with my existing tools?",
+    question: "Can I use Pitch|Parse with my existing tools?",
     answer: (
       <>
-        Yes. The Team plan includes full API access, so you can integrate PitchParse into your CRM,
+        Yes. The Team plan includes full API access, so you can integrate Pitch|Parse into your CRM,
         dialer, or internal tools. We also offer a{" "}
         <Link
           href="/cli"

@@ -57,7 +57,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             </div>
             <div className="text-center">
               <h1 className="font-display text-3xl font-bold tracking-tight">
-                Pitch<span className="text-primary text-glow-signal">Parse</span>
+                Pitch|<span className="text-primary text-glow-signal">Parse</span>
               </h1>
               <p className="mt-2 text-sm text-muted-foreground">
                 Every call, parsed. Every rep, sharper.
@@ -125,7 +125,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
             </div>
             <div className="text-center">
               <h1 className="font-display text-2xl font-bold tracking-tight">
-                Pitch<span className="text-primary">Parse</span>
+                Pitch|<span className="text-primary">Parse</span>
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 Every call, parsed. Every rep, sharper.

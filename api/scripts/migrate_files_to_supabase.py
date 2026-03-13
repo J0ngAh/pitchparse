@@ -39,7 +39,7 @@ def _resolve_org(db, org_id: str | None) -> str | None:
             return None
         return org_id
 
-    org_result = db.table("organizations").insert({"name": "PitchParse (Migrated)"}).execute()
+    org_result = db.table("organizations").insert({"name": "Pitch|Parse (Migrated)"}).execute()
     org_id = org_result.data[0]["id"]
     print(f"Created organization: {org_id}")
     return org_id

@@ -97,7 +97,7 @@ export function CTAFooter() {
                   </svg>
                 </div>
                 <span className="font-display text-sm font-bold">
-                  Pitch<span className="text-primary">Parse</span>
+                  Pitch|<span className="text-primary">Parse</span>
                 </span>
               </div>
               <p className="mt-3 text-xs text-muted-foreground">
@@ -137,7 +137,7 @@ export function CTAFooter() {
           </div>
 
           <div className="mt-12 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} PitchParse. All rights reserved.
+            &copy; {new Date().getFullYear()} Pitch|Parse. All rights reserved.
           </div>
         </div>
       </footer>

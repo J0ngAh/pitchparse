@@ -180,7 +180,7 @@ function Logo({ collapsed }: { collapsed: boolean }) {
       </div>
       {!collapsed && (
         <span className="font-display text-base font-bold tracking-tight">
-          Pitch<span className="text-primary">Parse</span>
+          Pitch|<span className="text-primary">Parse</span>
         </span>
       )}
     </div>

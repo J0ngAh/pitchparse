@@ -24,7 +24,7 @@ const tiers: Tier[] = [
     name: "Free Trial",
     monthlyPrice: 0,
     annualPrice: 0,
-    description: "Try PitchParse with up to 5 calls. No credit card required.",
+    description: "Try Pitch|Parse with up to 5 calls. No credit card required.",
     cta: "Get Started",
     features: [
       { text: "5 call analyses", included: true },

@@ -30,11 +30,11 @@ export const SAMPLE_TRANSCRIPT = `# Sales Call Transcript
 
 ## Presentation (8:00 - 15:00)
 
-**Sarah:** This is exactly the kind of problem PitchParse was designed to solve. Let me show you how it works. We analyze every sales call using AI to score performance across 10 key indicators — things like discovery depth, objection handling, and closing technique.
+**Sarah:** This is exactly the kind of problem Pitch|Parse was designed to solve. Let me show you how it works. We analyze every sales call using AI to score performance across 10 key indicators — things like discovery depth, objection handling, and closing technique.
 
 **Michael:** How is that different from just listening to call recordings?
 
-**Sarah:** Great question. The difference is scale and consistency. A manager might review 3-4 calls a week per rep. PitchParse analyzes every single call and provides specific, actionable coaching recommendations. Plus, the scoring is consistent — no bias, no bad days affecting the review.
+**Sarah:** Great question. The difference is scale and consistency. A manager might review 3-4 calls a week per rep. Pitch|Parse analyzes every single call and provides specific, actionable coaching recommendations. Plus, the scoring is consistent — no bias, no bad days affecting the review.
 
 ## BANT Qualification (15:00 - 20:00)
 

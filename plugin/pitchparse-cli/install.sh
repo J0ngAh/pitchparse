@@ -1,5 +1,5 @@
 #!/bin/sh
-# PitchParse CLI Plugin installer for Claude Code
+# Pitch|Parse CLI Plugin installer for Claude Code
 # Usage: sh install.sh
 
 set -e
@@ -30,7 +30,7 @@ cp -rn "$SCRIPT_DIR/.claude/skills/"* "$TARGET_DIR/.claude/skills/" 2>/dev/null 
 cp -rn "$SCRIPT_DIR/.claude/references/"* "$TARGET_DIR/.claude/references/" 2>/dev/null || true
 
 printf "\n"
-printf "PitchParse CLI plugin installed successfully.\n"
+printf "Pitch|Parse CLI plugin installed successfully.\n"
 printf "\n"
 printf "Next steps:\n"
 printf "  1. Set your ANTHROPIC_API_KEY environment variable\n"

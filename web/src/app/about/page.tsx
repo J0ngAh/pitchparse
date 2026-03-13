@@ -3,9 +3,9 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "About | PitchParse",
+  title: "About | Pitch|Parse",
   description:
-    "The story behind PitchParse — why we built AI-powered sales call quality assurance.",
+    "The story behind Pitch|Parse — why we built AI-powered sales call quality assurance.",
 };
 
 export default function AboutPage() {
@@ -21,7 +21,7 @@ export default function AboutPage() {
         </Link>
 
         <h1 className="font-display text-3xl font-bold md:text-4xl">
-          About Pitch<span className="text-primary">Parse</span>
+          About Pitch|<span className="text-primary">Parse</span>
         </h1>
 
         <div className="mt-10 space-y-6 text-muted-foreground leading-relaxed">
@@ -39,7 +39,7 @@ export default function AboutPage() {
           </p>
 
           <p>
-            PitchParse was born from frustration with that status quo. I wanted a tool that could
+            Pitch|Parse was born from frustration with that status quo. I wanted a tool that could
             listen to every single call, score it against a consistent framework, and give reps
             actionable coaching — not generic platitudes, but specific feedback tied to what they
             actually said.
@@ -48,7 +48,7 @@ export default function AboutPage() {
           <h2 className="font-display text-xl font-semibold text-foreground pt-4">What we built</h2>
 
           <p>
-            PitchParse uses AI to analyze sales calls against a structured KPI framework. Upload a
+            Pitch|Parse uses AI to analyze sales calls against a structured KPI framework. Upload a
             recording or paste a transcript, and you get a detailed scorecard with evidence-backed
             ratings, phase-by-phase breakdown, and personalized coaching recommendations.
           </p>
@@ -64,7 +64,7 @@ export default function AboutPage() {
 
           <p>
             We believe every sales team deserves the kind of call analysis that used to require a
-            dedicated QA team. PitchParse makes that accessible to teams of any size — from solo
+            dedicated QA team. Pitch|Parse makes that accessible to teams of any size — from solo
             founders validating their pitch to enterprise teams scaling their coaching programs.
           </p>
 
@@ -72,8 +72,8 @@ export default function AboutPage() {
 
           <div className="border-t border-border pt-8 mt-8">
             <p className="text-sm">
-              PitchParse is built by <span className="text-foreground font-medium">JINGA SIA</span>,
-              a company registered in Latvia, EU.
+              Pitch|Parse is built by <span className="text-foreground font-medium">JINGA SIA</span>
+              , a company registered in Latvia, EU.
             </p>
           </div>
         </div>

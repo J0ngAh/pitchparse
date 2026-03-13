@@ -1,6 +1,6 @@
-# PitchParse CLI Plugin for Claude Code
+# Pitch|Parse CLI Plugin for Claude Code
 
-AI-powered sales call quality assurance, directly in your terminal. PitchParse CLI is a Claude Code plugin that transcribes sales calls, scores them against a structured KPI framework, and delivers actionable coaching — all through simple slash commands.
+AI-powered sales call quality assurance, directly in your terminal. Pitch|Parse CLI is a Claude Code plugin that transcribes sales calls, scores them against a structured KPI framework, and delivers actionable coaching — all through simple slash commands.
 
 ## Prerequisites
 

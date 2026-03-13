@@ -15,7 +15,7 @@ interface Testimonial {
 const testimonials: Testimonial[] = [
   {
     quote:
-      "PitchParse cut our ramp time in half. New reps hit quota 3 weeks faster because they get specific, actionable coaching after every single call.",
+      "Pitch|Parse cut our ramp time in half. New reps hit quota 3 weeks faster because they get specific, actionable coaching after every single call.",
     name: "Sarah Chen",
     role: "VP Sales",
     company: "TechFlow",

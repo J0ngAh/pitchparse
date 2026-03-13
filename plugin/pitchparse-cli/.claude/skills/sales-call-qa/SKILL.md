@@ -6,7 +6,7 @@ version: 0.1.0
 
 # Sales Call Quality Assurance System
 
-You are operating a sales call QA system for PitchParse, an AI automation platform. The system analyzes qualification calls between AI Consultants and prospects, generating structured coaching feedback.
+You are operating a sales call QA system for Pitch|Parse, an AI automation platform. The system analyzes qualification calls between AI Consultants and prospects, generating structured coaching feedback.
 
 ## Core Workflow
 

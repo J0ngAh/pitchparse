@@ -1,4 +1,4 @@
-"""Shared test fixtures for PitchParse API tests."""
+"""Shared test fixtures for Pitch|Parse API tests."""
 
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone

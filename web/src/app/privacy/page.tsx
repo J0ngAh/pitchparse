@@ -3,8 +3,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | PitchParse",
-  description: "How PitchParse collects, uses, and protects your data.",
+  title: "Privacy Policy | Pitch|Parse",
+  description: "How Pitch|Parse collects, uses, and protects your data.",
 };
 
 export default function PrivacyPage() {
@@ -28,7 +28,7 @@ export default function PrivacyPage() {
               1. Data Controller
             </h2>
             <p>
-              The data controller for PitchParse is{" "}
+              The data controller for Pitch|Parse is{" "}
               <strong className="text-foreground">JINGA SIA</strong>, a company registered in
               Latvia, European Union. If you have questions about this policy or your personal data,
               contact us at{" "}
@@ -72,7 +72,7 @@ export default function PrivacyPage() {
             <ul className="list-disc pl-6 space-y-2 mt-2">
               <li>
                 <strong className="text-foreground">Contract performance:</strong> processing
-                necessary to provide the PitchParse service you signed up for.
+                necessary to provide the Pitch|Parse service you signed up for.
               </li>
               <li>
                 <strong className="text-foreground">Legitimate interest:</strong> analytics and
@@ -90,7 +90,7 @@ export default function PrivacyPage() {
               4. How We Use Your Data
             </h2>
             <ul className="list-disc pl-6 space-y-2">
-              <li>To provide and maintain the PitchParse service</li>
+              <li>To provide and maintain the Pitch|Parse service</li>
               <li>To analyze call transcripts and generate scoring and coaching feedback</li>
               <li>To process payments and manage subscriptions</li>
               <li>To send service-related communications (account updates, security alerts)</li>
@@ -102,7 +102,7 @@ export default function PrivacyPage() {
             <h2 className="font-display text-lg font-semibold text-foreground mb-3">
               5. Third-Party Processors
             </h2>
-            <p>We use the following third-party services to operate PitchParse:</p>
+            <p>We use the following third-party services to operate Pitch|Parse:</p>
             <ul className="list-disc pl-6 space-y-2 mt-2">
               <li>
                 <strong className="text-foreground">Supabase</strong> — database hosting,
@@ -192,8 +192,8 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-display text-lg font-semibold text-foreground mb-3">9. Cookies</h2>
             <p>
-              PitchParse uses essential cookies for authentication and session management. We do not
-              use third-party tracking cookies or advertising cookies.
+              Pitch|Parse uses essential cookies for authentication and session management. We do
+              not use third-party tracking cookies or advertising cookies.
             </p>
           </section>
 
@@ -202,7 +202,7 @@ export default function PrivacyPage() {
               10. Children&apos;s Privacy
             </h2>
             <p>
-              PitchParse is not intended for use by individuals under 16. We do not knowingly
+              Pitch|Parse is not intended for use by individuals under 16. We do not knowingly
               collect personal data from children. If you believe a child has provided us with
               personal data, please contact us and we will delete it.
             </p>
@@ -214,7 +214,7 @@ export default function PrivacyPage() {
             </h2>
             <p>
               We may update this policy from time to time. We will notify you of material changes by
-              email or through a notice on our website. Your continued use of PitchParse after
+              email or through a notice on our website. Your continued use of Pitch|Parse after
               changes constitutes acceptance of the updated policy.
             </p>
           </section>

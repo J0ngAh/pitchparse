@@ -1,4 +1,4 @@
--- PitchParse Phase 1: Initial Schema
+-- Pitch|Parse Phase 1: Initial Schema
 -- Multi-tenant sales call QA system with RLS
 
 -- Enable UUID generation

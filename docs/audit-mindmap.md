@@ -5,7 +5,7 @@ Each run overwrites the metrics section but appends to insights.
 
 ## Last Run
 - **Date**: 2026-03-13 (run 21)
-- **Project**: fh-challenges (PitchParse)
+- **Project**: fh-challenges (Pitch|Parse)
 
 ## Metrics Snapshot
 > Overwritten each run with current state.

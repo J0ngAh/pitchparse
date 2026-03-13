@@ -5,9 +5,9 @@ import time
 
 DEFAULT_CONFIG: dict = {
     "branding": {
-        "company_name": "PitchParse",
+        "company_name": "Pitch|Parse",
         "tagline": "Every call, parsed. Every rep, sharper.",
-        "page_title": "PitchParse",
+        "page_title": "Pitch|Parse",
         "primary_color": "#0D9488",
     },
     "scoring": {

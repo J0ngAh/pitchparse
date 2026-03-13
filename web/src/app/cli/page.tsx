@@ -72,7 +72,7 @@ export default function CLIPage() {
             CLI Plugin
           </div>
           <h1 className="font-display text-3xl font-bold md:text-4xl">
-            Pitch<span className="text-primary">Parse</span> CLI
+            Pitch|<span className="text-primary">Parse</span> CLI
           </h1>
           <p className="mt-4 text-lg text-muted-foreground">
             AI-powered sales call QA in your terminal. A Claude Code plugin that transcribes,
@@ -166,7 +166,7 @@ sh install.sh`}
           <p className="text-sm text-muted-foreground">
             Need help?{" "}
             <Link href="/about" className="text-primary hover:underline">
-              Learn more about PitchParse
+              Learn more about Pitch|Parse
             </Link>
           </p>
         </div>

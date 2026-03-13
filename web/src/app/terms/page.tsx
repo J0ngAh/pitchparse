@@ -3,8 +3,8 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | PitchParse",
-  description: "Terms and conditions for using the PitchParse service.",
+  title: "Terms of Service | Pitch|Parse",
+  description: "Terms and conditions for using the Pitch|Parse service.",
 };
 
 export default function TermsPage() {
@@ -28,7 +28,7 @@ export default function TermsPage() {
               1. Acceptance of Terms
             </h2>
             <p>
-              By accessing or using PitchParse (&quot;the Service&quot;), operated by JINGA SIA
+              By accessing or using Pitch|Parse (&quot;the Service&quot;), operated by JINGA SIA
               (&quot;we&quot;, &quot;us&quot;, &quot;our&quot;), a company registered in Latvia,
               European Union, you agree to be bound by these Terms of Service. If you do not agree,
               do not use the Service.
@@ -40,7 +40,7 @@ export default function TermsPage() {
               2. Service Description
             </h2>
             <p>
-              PitchParse is an AI-powered sales call quality assurance platform. The Service allows
+              Pitch|Parse is an AI-powered sales call quality assurance platform. The Service allows
               you to upload call recordings or transcripts for automated analysis, scoring against a
               structured KPI framework, and generation of coaching recommendations.
             </p>
@@ -113,7 +113,7 @@ export default function TermsPage() {
               6. Intellectual Property
             </h2>
             <p>
-              The PitchParse platform, including its design, code, scoring frameworks, and
+              The Pitch|Parse platform, including its design, code, scoring frameworks, and
               documentation, is the intellectual property of JINGA SIA. You may not copy, modify, or
               distribute any part of the Service without written permission.
             </p>
@@ -124,7 +124,7 @@ export default function TermsPage() {
               7. User Content & Data
             </h2>
             <p>
-              You retain full ownership of all content you upload to PitchParse, including call
+              You retain full ownership of all content you upload to Pitch|Parse, including call
               recordings, transcripts, and any associated metadata. We do not claim ownership of
               your data.
             </p>

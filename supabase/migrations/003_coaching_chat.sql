@@ -1,4 +1,4 @@
--- PitchParse Phase 2: Coaching Chat
+-- Pitch|Parse Phase 2: Coaching Chat
 -- Interactive coaching conversations tied to analyses
 
 -- ============================================================

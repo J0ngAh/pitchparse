@@ -3,9 +3,9 @@ import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
-  title: "Security | PitchParse",
+  title: "Security | Pitch|Parse",
   description:
-    "How PitchParse protects your data — infrastructure, authentication, and security practices.",
+    "How Pitch|Parse protects your data — infrastructure, authentication, and security practices.",
 };
 
 export default function SecurityPage() {
@@ -32,8 +32,8 @@ export default function SecurityPage() {
               Infrastructure
             </h2>
             <p>
-              PitchParse runs on Supabase-hosted PostgreSQL. All data is encrypted at rest (AES-256)
-              and in transit (TLS 1.2+). Database backups are automated and encrypted. Our
+              Pitch|Parse runs on Supabase-hosted PostgreSQL. All data is encrypted at rest
+              (AES-256) and in transit (TLS 1.2+). Database backups are automated and encrypted. Our
               application server runs in a containerized environment with no direct database access
               from the public internet.
             </p>

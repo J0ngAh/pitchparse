@@ -1,4 +1,4 @@
-# PitchParse
+# Pitch|Parse
 
 **Every call, parsed. Every rep, sharper.** AI-powered sales call quality assurance.
 
@@ -167,7 +167,7 @@ The UI is built around the metaphor of *decoding a signal* — inspired by audio
 
 ## The Qualification Framework
 
-Every call is scored against PitchParse's 5-phase discovery call structure:
+Every call is scored against Pitch|Parse's 5-phase discovery call structure:
 
 ### Call Phases (0-20 each)
 

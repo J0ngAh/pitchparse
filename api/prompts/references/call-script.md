@@ -1,4 +1,4 @@
-# PitchParse Discovery Call Script & Qualification Framework
+# Pitch|Parse Discovery Call Script & Qualification Framework
 
 ## Call Structure (30 minutes)
 
@@ -19,7 +19,7 @@
 ---
 
 ### Phase 2: Discovery & Pain Points (3-15 min)
-**Goal:** Uncover genuine business pain that PitchParse can solve.
+**Goal:** Uncover genuine business pain that Pitch|Parse can solve.
 
 **Required questions (adapt to conversation flow):**
 1. "Tell me about your current workflow for [area they indicated in the AI Strategy widget]. What does that look like day to day?"
@@ -73,7 +73,7 @@
 ---
 
 ### Phase 4: Solution Framing & Value Prop (22-26 min)
-**Goal:** Connect PitchParse's capabilities to their specific pain.
+**Goal:** Connect Pitch|Parse's capabilities to their specific pain.
 
 **Required approach:**
 - Do NOT give a generic product demo
