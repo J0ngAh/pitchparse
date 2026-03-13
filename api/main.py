@@ -130,7 +130,11 @@ app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"]
 
 
 # Inngest — mounts /api/inngest for function discovery and execution
-inngest.fast_api.serve(app, inngest_client, all_functions)
+settings = get_settings()
+if settings.inngest_signing_key:
+    inngest.fast_api.serve(app, inngest_client, all_functions)
+else:
+    structlog.get_logger().warning("inngest_disabled", reason="INNGEST_SIGNING_KEY not set")
 
 
 @app.get("/api/health")
