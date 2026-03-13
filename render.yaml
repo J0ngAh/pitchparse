@@ -34,7 +34,7 @@ services:
     name: pitchparse-web
     runtime: node
     buildCommand: cd web && npm ci && npm run build
-    startCommand: node web/.next/standalone/server.js
+    startCommand: cd web && node .next/standalone/server.js
     envVars:
       - key: API_URL
         sync: false
