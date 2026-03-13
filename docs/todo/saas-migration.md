@@ -124,9 +124,9 @@
 - [ ] Prompt versioning (templates in DB)
 - [ ] White-label branding (logos, colors, subdomain routing)
 - [x] Manager vs consultant roles (3 roles: user, manager, admin — with RLS, team management, invitations)
-- [ ] Usage-based billing with included quota
-- [ ] 14-day free trial flow
-- [ ] Scoring consistency: temperature=0, pin model versions, benchmark test set
+- [x] Usage-based billing with included quota (free tier, plan alignment, Stripe trial)
+- [x] 14-day free trial flow (Stripe-native trial_period_days, trial banner, auto-downgrade)
+- [x] Scoring consistency: temperature=0, pinned model version, benchmark test set
 
 ---
 
