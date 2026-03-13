@@ -1,11 +1,13 @@
 """Coach router — interactive coaching chat with SSE streaming."""
 
 import json
+from collections.abc import AsyncIterator
 
 import structlog
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from pydantic_ai import Agent
 
 from api.auth import CurrentUser
 from api.config import get_settings
@@ -24,6 +26,7 @@ from api.services.coach_service import (
     stream_coach_response,
 )
 from api.utils.supabase_helpers import row_as_dict, rows_as_dicts
+from supabase import Client  # type: ignore[attr-defined]
 
 logger = structlog.get_logger()
 
@@ -184,26 +187,24 @@ async def get_conversation(conversation_id: str, user: CurrentUser):
     return ConversationDetail(**conv_data)
 
 
-@router.post(
-    "/conversations/{conversation_id}/messages",
-    summary="Send message and stream coach response",
-)
-async def send_message(
+def _load_chat_context(
     conversation_id: str,
-    req: ChatMessageRequest,
+    user_message: str,
     user: CurrentUser,
-):
-    """Send a user message and stream the coach's response via SSE."""
-    settings = get_settings()
-    if not settings.anthropic_api_key:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Anthropic API key not configured",
-        )
+    db: Client,
+) -> tuple[CoachDeps, Agent[CoachDeps, str], list[dict]]:
+    """Load everything needed for a coach chat turn.
 
-    db = get_supabase_client()
+    Verifies conversation ownership, persists the user message,
+    loads message history and analysis context, and builds the
+    agent with org-specific prompt.
 
-    # Verify conversation ownership
+    Returns:
+        Tuple of (deps, agent, history).
+
+    Raises:
+        HTTPException: If conversation not found.
+    """
     conv_result = (
         db.table("conversations")
         .select("*")
@@ -220,16 +221,14 @@ async def send_message(
         )
     conv = row_as_dict(conv_result)
 
-    # Save user message
     db.table("messages").insert(
         {
             "conversation_id": conversation_id,
             "role": "user",
-            "content": req.content,
+            "content": user_message,
         }
     ).execute()
 
-    # Load conversation history
     msg_result = (
         db.table("messages")
         .select("role, content")
@@ -237,11 +236,9 @@ async def send_message(
         .order("created_at", desc=False)
         .execute()
     )
-    history = rows_as_dicts(msg_result)
-    # Exclude the just-inserted user message from history (it's the current prompt)
-    history = history[:-1]
+    # Exclude the just-inserted user message (it's the current prompt)
+    history = rows_as_dicts(msg_result)[:-1]
 
-    # Load analysis context if scoped
     analysis_context = None
     if conv.get("analysis_id"):
         analysis_result = (
@@ -264,57 +261,86 @@ async def send_message(
         analysis_context=analysis_context,
     )
 
-    # Load org-specific coach prompt if set
     org_result = (
         db.table("organizations").select("coach_prompt").eq("id", user["org_id"]).single().execute()
     )
     custom_prompt = row_as_dict(org_result).get("coach_prompt") if org_result.data else None
 
+    settings = get_settings()
     agent = build_coach_agent(settings.anthropic_api_key, custom_prompt=custom_prompt)
 
-    async def event_stream():
-        full_response = []
-        try:
-            async for delta in stream_coach_response(
-                user_message=req.content,
-                history=history,
-                deps=deps,
-                agent=agent,
-            ):
-                full_response.append(delta)
-                yield f"data: {json.dumps({'delta': delta})}\n\n"
+    return deps, agent, history
 
-            # Save complete assistant message
-            assistant_content = "".join(full_response)
-            msg_insert = (
-                db.table("messages")
-                .insert(
-                    {
-                        "conversation_id": conversation_id,
-                        "role": "assistant",
-                        "content": assistant_content,
-                    }
-                )
-                .execute()
+
+async def _make_sse_stream(
+    db: Client,
+    conversation_id: str,
+    agent: Agent[CoachDeps, str],
+    deps: CoachDeps,
+    user_message: str,
+    history: list[dict],
+) -> AsyncIterator[str]:
+    full_response: list[str] = []
+    try:
+        async for delta in stream_coach_response(
+            user_message=user_message,
+            history=history,
+            deps=deps,
+            agent=agent,
+        ):
+            full_response.append(delta)
+            yield f"data: {json.dumps({'delta': delta})}\n\n"
+
+        assistant_content = "".join(full_response)
+        msg_insert = (
+            db.table("messages")
+            .insert(
+                {
+                    "conversation_id": conversation_id,
+                    "role": "assistant",
+                    "content": assistant_content,
+                }
             )
-            saved_msg = rows_as_dicts(msg_insert)[0]
+            .execute()
+        )
+        saved_msg = rows_as_dicts(msg_insert)[0]
 
-            # Update conversation timestamp
-            db.table("conversations").update({"updated_at": "now()"}).eq(
-                "id", conversation_id
-            ).execute()
+        db.table("conversations").update({"updated_at": "now()"}).eq(
+            "id", conversation_id
+        ).execute()
 
-            yield f"data: {json.dumps({'done': True, 'message_id': saved_msg['id']})}\n\n"
-        except Exception as e:
-            logger.error(
-                "coach_stream_error",
-                conversation_id=conversation_id,
-                error=str(e),
-            )
-            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        yield (f"data: {json.dumps({'done': True, 'message_id': saved_msg['id']})}\n\n")
+    except Exception as e:
+        logger.error(
+            "coach_stream_error",
+            conversation_id=conversation_id,
+            error=str(e),
+        )
+        yield f"data: {json.dumps({'error': str(e)})}\n\n"
+
+
+@router.post(
+    "/conversations/{conversation_id}/messages",
+    summary="Send message and stream coach response",
+)
+async def send_message(
+    conversation_id: str,
+    req: ChatMessageRequest,
+    user: CurrentUser,
+):
+    """Send a user message and stream the coach's response via SSE."""
+    settings = get_settings()
+    if not settings.anthropic_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Anthropic API key not configured",
+        )
+
+    db = get_supabase_client()
+    deps, agent, history = _load_chat_context(conversation_id, req.content, user, db)
 
     return StreamingResponse(
-        event_stream(),
+        _make_sse_stream(db, conversation_id, agent, deps, req.content, history),
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

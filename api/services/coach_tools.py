@@ -43,6 +43,21 @@ def _safe_rows(result: Any) -> list[dict[str, Any]]:
         return []
 
 
+def _format_analyses_table(rows: list[dict[str, Any]]) -> str:
+    lines = ["| # | Consultant | Prospect | Score | Rating | Date | ID |"]
+    lines.append("|---|-----------|----------|-------|--------|------|----|")
+    for i, row in enumerate(rows, 1):
+        lines.append(
+            f"| {i} | {row.get('consultant_name', 'N/A')} "
+            f"| {row.get('prospect_name', 'N/A')} "
+            f"| {row.get('overall_score', 'N/A')} "
+            f"| {row.get('rating', 'N/A')} "
+            f"| {_format_date(row.get('created_at'))} "
+            f"| {row['id'][:8]}... |"
+        )
+    return "\n".join(lines)
+
+
 async def list_analyses(
     ctx: RunContext[CoachDeps],
     consultant_name: str | None = None,
@@ -93,18 +108,7 @@ async def list_analyses(
     if not rows:
         return "No analyses found matching your criteria."
 
-    lines = ["| # | Consultant | Prospect | Score | Rating | Date | ID |"]
-    lines.append("|---|-----------|----------|-------|--------|------|----|")
-    for i, row in enumerate(rows, 1):
-        lines.append(
-            f"| {i} | {row.get('consultant_name', 'N/A')} "
-            f"| {row.get('prospect_name', 'N/A')} "
-            f"| {row.get('overall_score', 'N/A')} "
-            f"| {row.get('rating', 'N/A')} "
-            f"| {_format_date(row.get('created_at'))} "
-            f"| {row['id'][:8]}... |"
-        )
-    return "\n".join(lines)
+    return _format_analyses_table(rows)
 
 
 async def get_analysis_detail(
@@ -141,6 +145,35 @@ async def get_analysis_detail(
     from api.services.coach_service import _build_analysis_context
 
     return _build_analysis_context(result.data)
+
+
+def _search_excerpt(lines: list[str], search_term: str, max_lines: int) -> str:
+    total = len(lines)
+    term_lower = search_term.lower()
+    matches = [i for i, line in enumerate(lines) if term_lower in line.lower()]
+    if not matches:
+        return f"No matches found for '{search_term}' in this transcript."
+
+    match_line = matches[0]
+    context_start = max(0, match_line - 5)
+    context_end = min(total, match_line + max_lines - 5)
+    excerpt_lines = lines[context_start:context_end]
+    header = (
+        f"Found '{search_term}' at line {match_line + 1} "
+        f"({len(matches)} total matches). "
+        f"Showing lines {context_start + 1}-{context_end}:"
+    )
+    numbered = [f"{context_start + i + 1:4d} | {line}" for i, line in enumerate(excerpt_lines)]
+    return f"{header}\n\n```\n" + "\n".join(numbered) + "\n```"
+
+
+def _range_excerpt(lines: list[str], start_line: int, max_lines: int) -> str:
+    total = len(lines)
+    end = min(start_line + max_lines, total)
+    excerpt_lines = lines[start_line:end]
+    header = f"Showing lines {start_line + 1}-{end} of {total}:"
+    numbered = [f"{start_line + i + 1:4d} | {line}" for i, line in enumerate(excerpt_lines)]
+    return f"{header}\n\n```\n" + "\n".join(numbered) + "\n```"
 
 
 async def get_transcript_excerpt(
@@ -185,30 +218,11 @@ async def get_transcript_excerpt(
         return "Transcript has no content."
 
     lines = body.split("\n")
-    total = len(lines)
 
     if search_term:
-        term_lower = search_term.lower()
-        matches = [i for i, line in enumerate(lines) if term_lower in line.lower()]
-        if not matches:
-            return f"No matches found for '{search_term}' in this transcript."
+        return _search_excerpt(lines, search_term, max_lines)
 
-        # Show context around first match
-        match_line = matches[0]
-        context_start = max(0, match_line - 5)
-        context_end = min(total, match_line + max_lines - 5)
-        excerpt_lines = lines[context_start:context_end]
-        header = (
-            f"Found '{search_term}' at line {match_line + 1} "
-            f"({len(matches)} total matches). Showing lines {context_start + 1}-{context_end}:"
-        )
-    else:
-        end = min(start_line + max_lines, total)
-        excerpt_lines = lines[start_line:end]
-        header = f"Showing lines {start_line + 1}-{end} of {total}:"
-
-    numbered = [f"{start_line + i + 1:4d} | {line}" for i, line in enumerate(excerpt_lines)]
-    return f"{header}\n\n```\n" + "\n".join(numbered) + "\n```"
+    return _range_excerpt(lines, start_line, max_lines)
 
 
 async def compare_consultants(
@@ -261,6 +275,27 @@ async def compare_consultants(
     return f"Comparison over the last {days} days:\n\n" + "\n".join(lines)
 
 
+def _aggregate_kpi_scores(rows: list[dict[str, Any]]) -> dict[str, float]:
+    kpi_scores: dict[str, list[float]] = {}
+    for r in rows:
+        sc = r.get("scorecard")
+        if isinstance(sc, list):
+            for kpi in sc:
+                kpi_name = kpi.get("kpi", "")
+                kpi_score = kpi.get("score")
+                if kpi_name and kpi_score is not None:
+                    kpi_scores.setdefault(kpi_name, []).append(float(kpi_score))
+    return {k: sum(v) / len(v) for k, v in kpi_scores.items() if v}
+
+
+def _count_ratings(rows: list[dict[str, Any]]) -> dict[str, int]:
+    ratings: dict[str, int] = {}
+    for r in rows:
+        rt = r.get("rating", "Unknown")
+        ratings[rt] = ratings.get(rt, 0) + 1
+    return ratings
+
+
 async def get_team_stats(
     ctx: RunContext[CoachDeps],
     days: int = 30,
@@ -297,24 +332,8 @@ async def get_team_stats(
     below_60 = len([s for s in scores if s < 60])
     avg = sum(scores) / len(scores) if scores else 0
 
-    # Count by rating
-    ratings: dict[str, int] = {}
-    for r in rows:
-        rt = r.get("rating", "Unknown")
-        ratings[rt] = ratings.get(rt, 0) + 1
-
-    # Find top/bottom KPIs across all analyses
-    kpi_scores: dict[str, list[float]] = {}
-    for r in rows:
-        sc = r.get("scorecard")
-        if isinstance(sc, list):
-            for kpi in sc:
-                kpi_name = kpi.get("kpi", "")
-                kpi_score = kpi.get("score")
-                if kpi_name and kpi_score is not None:
-                    kpi_scores.setdefault(kpi_name, []).append(float(kpi_score))
-
-    kpi_avgs = {k: sum(v) / len(v) for k, v in kpi_scores.items() if v}
+    ratings = _count_ratings(rows)
+    kpi_avgs = _aggregate_kpi_scores(rows)
     top_kpi = max(kpi_avgs, key=kpi_avgs.get, default=None) if kpi_avgs else None  # type: ignore[arg-type]
     bottom_kpi = min(kpi_avgs, key=kpi_avgs.get, default=None) if kpi_avgs else None  # type: ignore[arg-type]
 
@@ -335,6 +354,25 @@ async def get_team_stats(
         lines.append(f"- **Weakest KPI:** {bottom_kpi} (avg {kpi_avgs[bottom_kpi]:.1f}/5)")
 
     return "\n".join(lines)
+
+
+def _collect_themes(
+    rows: list[dict[str, Any]], priority: int | None
+) -> tuple[dict[str, int], dict[str, str]]:
+    themes: dict[str, int] = {}
+    examples: dict[str, str] = {}
+    for row in rows:
+        coaching = row.get("coaching")
+        if not isinstance(coaching, list):
+            continue
+        for item in coaching:
+            if priority is not None and item.get("priority") != priority:
+                continue
+            title = item.get("title", "Untitled")
+            themes[title] = themes.get(title, 0) + 1
+            if title not in examples and item.get("issue"):
+                examples[title] = item["issue"]
+    return themes, examples
 
 
 async def search_coaching_patterns(
@@ -375,20 +413,7 @@ async def search_coaching_patterns(
     if not rows:
         return "No analyses found to search for coaching patterns."
 
-    # Collect all coaching items
-    themes: dict[str, int] = {}
-    examples: dict[str, str] = {}
-    for row in rows:
-        coaching = row.get("coaching")
-        if not isinstance(coaching, list):
-            continue
-        for item in coaching:
-            if priority is not None and item.get("priority") != priority:
-                continue
-            title = item.get("title", "Untitled")
-            themes[title] = themes.get(title, 0) + 1
-            if title not in examples and item.get("issue"):
-                examples[title] = item["issue"]
+    themes, examples = _collect_themes(rows, priority)
 
     if not themes:
         return "No coaching patterns found matching your criteria."
