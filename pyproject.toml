@@ -15,6 +15,9 @@ asyncio_mode = "auto"
 filterwarnings = [
     "ignore::pydantic.warnings.PydanticDeprecatedSince20:inngest",
 ]
+markers = [
+    "benchmark: marks tests that call Claude API (deselect with '-m \"not benchmark\"')",
+]
 
 [tool.coverage.run]
 source = ["api"]
