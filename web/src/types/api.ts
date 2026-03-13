@@ -213,6 +213,7 @@ export interface SubscriptionResponse {
   analysis_quota: number;
   analysis_count: number;
   current_period_end: string | null;
+  trial_ends_at: string | null;
 }
 
 // ---------- Config ----------

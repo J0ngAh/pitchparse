@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Check, ArrowRight, Star } from "lucide-react";
+import { Check, ArrowRight, Star, Clock } from "lucide-react";
 
 const plans = [
   {
@@ -94,9 +94,38 @@ export default function BillingPage() {
       : 0
     : 0;
 
+  const trialDaysLeft =
+    subscription?.status === "trialing" && subscription.trial_ends_at
+      ? Math.max(
+          0,
+          Math.ceil(
+            (new Date(subscription.trial_ends_at).getTime() - new Date().getTime()) /
+              (1000 * 60 * 60 * 24),
+          ),
+        )
+      : null;
+
   return (
     <div className="space-y-6">
       <PageHeader title="Billing" description="Manage your subscription and usage" />
+
+      {/* Trial banner */}
+      {trialDaysLeft !== null && (
+        <Card className="border-primary/50 bg-primary/5">
+          <CardContent className="flex items-center gap-3 py-4">
+            <Clock className="h-5 w-5 text-primary" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">
+                You&apos;re on a 14-day free trial of the{" "}
+                <span className="capitalize">{subscription?.plan}</span> plan
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {trialDaysLeft} days remaining — add a payment method to continue after the trial
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Current usage */}
       {subscription && (
