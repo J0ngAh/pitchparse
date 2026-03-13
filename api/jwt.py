@@ -1,4 +1,4 @@
-"""Local JWT verification using Supabase JWKS public key."""
+"""Local JWT verification using Supabase JWKS endpoint."""
 
 import time
 
@@ -28,7 +28,11 @@ def _get_jwks_client() -> PyJWKClient:
 
 
 def decode_supabase_jwt(token: str) -> dict | None:
-    """Decode and verify a Supabase JWT locally.
+    """Decode and verify a Supabase JWT locally using the JWKS endpoint.
+
+    Supports both the current ECC P-256 (ES256) signing key and the
+    legacy HS256 shared secret during the migration period. The correct
+    key is selected automatically via the ``kid`` header in the JWT.
 
     Returns the decoded payload dict on success, None on failure.
     """
@@ -39,7 +43,7 @@ def decode_supabase_jwt(token: str) -> dict | None:
         payload = jwt.decode(
             token,
             signing_key.key,
-            algorithms=["RS256"],
+            algorithms=["ES256", "HS256"],
             audience="authenticated",
             issuer=f"{settings.supabase_url}/auth/v1",
         )
