@@ -36,7 +36,10 @@ class TestAnalysisFnSteps:
                 mock_result.model_dump.return_value = {"overall_score": 82}
                 with patch("api.inngest.analysis.get_settings") as mock_s:
                     mock_s.return_value.anthropic_api_key = "key"
-                    with patch("api.inngest.analysis.run_analysis", return_value=mock_result):
+                    with patch(
+                        "api.inngest.analysis.run_analysis",
+                        return_value=(mock_result, "tmpl-id"),
+                    ):
                         return fn()
             elif name == "save_results_and_increment_quota":
                 mock_db = MagicMock()
@@ -89,13 +92,18 @@ class TestReportFnSteps:
                 with patch("api.inngest.report.get_supabase_client", return_value=mock_db):
                     return fn()
             elif name == "call_claude":
-                with patch("api.inngest.report.get_settings") as mock_s:
-                    mock_s.return_value.anthropic_api_key = "key"
-                    with patch(
-                        "api.inngest.report.run_report_generation",
-                        return_value="<html></html>",
-                    ):
-                        return fn()
+                mock_db2 = MagicMock()
+                org_resp = MagicMock(data={"config": None})
+                chain = mock_db2.table.return_value.select.return_value
+                chain.eq.return_value.single.return_value.execute.return_value = org_resp
+                with patch("api.inngest.report.get_supabase_client", return_value=mock_db2):
+                    with patch("api.inngest.report.get_settings") as mock_s:
+                        mock_s.return_value.anthropic_api_key = "key"
+                        with patch(
+                            "api.inngest.report.run_report_generation",
+                            return_value="<html></html>",
+                        ):
+                            return fn()
             elif name == "save_report":
                 mock_db = MagicMock()
                 with patch("api.inngest.report.get_supabase_client", return_value=mock_db):

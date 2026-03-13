@@ -70,20 +70,34 @@ def _is_custom_config(config: dict) -> bool:
     )
 
 
-def build_system_prompt(config: dict | None = None) -> str:
-    """Build the system prompt for analysis using reference files."""
+def build_system_prompt(
+    config: dict | None = None, org_id: str | None = None
+) -> tuple[str, str | None]:
+    """Build the system prompt for analysis using reference files.
+
+    Returns (prompt_text, template_id). template_id is None when using file fallback.
+    """
     api_dir = Path(__file__).resolve().parent.parent
     refs_dir = api_dir / "prompts" / "references"
-    cmd_path = api_dir / "prompts" / "analyze.md"
 
     from api.services.config_service import DEFAULT_CONFIG
 
     cfg = config or DEFAULT_CONFIG
     custom = _is_custom_config(cfg) if config else False
 
+    # Resolve the command body via prompt versioning
+    template_id: str | None = None
+    if org_id:
+        from api.services.prompt_service import get_active_prompt
+
+        cmd_body, template_id = get_active_prompt(org_id, "analyze")
+    else:
+        cmd_path = api_dir / "prompts" / "analyze.md"
+        cmd_body = _read_command_body(str(cmd_path)) if cmd_path.exists() else ""
+
     parts = []
-    if cmd_path.exists():
-        parts.append(_read_command_body(str(cmd_path)))
+    if cmd_body:
+        parts.append(cmd_body)
 
     if custom:
         parts.append(f"\n\n---\n\n{_build_call_script_from_config(cfg)}")
@@ -102,7 +116,7 @@ def build_system_prompt(config: dict | None = None) -> str:
                     f"\n\n---\n\n# Reference: {ref_name}\n\n{_read_file_cached(str(ref_path))}"
                 )
 
-    return "\n\n".join(parts)
+    return "\n\n".join(parts), template_id
 
 
 def run_analysis(
@@ -111,13 +125,17 @@ def run_analysis(
     model: str | None = None,
     focus: str | None = None,
     config: dict | None = None,
-) -> AnalysisResult:
-    """Run analysis via PydanticAI structured output. Returns AnalysisResult."""
+    org_id: str | None = None,
+) -> tuple[AnalysisResult, str | None]:
+    """Run analysis via PydanticAI structured output.
+
+    Returns (AnalysisResult, prompt_template_id).
+    """
     from api.config import get_settings
 
     settings = get_settings()
     model = model or settings.claude_model
-    system_prompt = build_system_prompt(config)
+    system_prompt, template_id = build_system_prompt(config, org_id=org_id)
 
     user_message = (
         "IMPORTANT: The reference files (KPI rubric, call script, coaching frameworks) "
@@ -144,7 +162,7 @@ def run_analysis(
         user_message,
         model_settings={"max_tokens": 32000, "temperature": settings.claude_temperature},
     )
-    return result.output
+    return result.output, template_id
 
 
 def render_analysis_markdown(result: AnalysisResult) -> str:
@@ -229,31 +247,57 @@ def _render_coaching(coaching: list) -> list[str]:
 # --- Report generation (still uses raw Claude output, not PydanticAI) ---
 
 
-def _build_report_system_prompt() -> str:
-    """Build the system prompt for report generation from reference files."""
+def _build_report_system_prompt(org_id: str | None = None) -> tuple[str, str | None]:
+    """Build the system prompt for report generation from reference files.
+
+    Returns (prompt_text, template_id).
+    """
     api_dir = Path(__file__).resolve().parent.parent
-    cmd_path = api_dir / "prompts" / "report.md"
     coaching_path = api_dir / "prompts" / "references" / "coaching-frameworks.md"
 
+    template_id: str | None = None
+    if org_id:
+        from api.services.prompt_service import get_active_prompt
+
+        cmd_body, template_id = get_active_prompt(org_id, "report")
+    else:
+        cmd_path = api_dir / "prompts" / "report.md"
+        cmd_body = _read_command_body(str(cmd_path)) if cmd_path.exists() else ""
+
     parts = []
-    if cmd_path.exists():
-        parts.append(_read_command_body(str(cmd_path)))
+    if cmd_body:
+        parts.append(cmd_body)
     if coaching_path.exists():
         parts.append(
             f"\n\n---\n\n# Reference: coaching-frameworks.md\n\n"
             f"{_read_file_cached(str(coaching_path))}"
         )
-    return "\n\n".join(parts)
+    return "\n\n".join(parts), template_id
 
 
-def _build_report_user_message(analysis_text: str) -> str:
+def _build_report_user_message(analysis_text: str, branding: dict | None = None) -> str:
     """Build the user message for report generation."""
+    branding_section = ""
+    if branding:
+        parts = []
+        if branding.get("company_name"):
+            parts.append(
+                f'Use "{branding["company_name"]}" as the company name in headers/footers.'
+            )
+        if branding.get("primary_color"):
+            parts.append(f"Use {branding['primary_color']} for accent colors.")
+        if branding.get("logo_url"):
+            parts.append(f"Logo URL: {branding['logo_url']}")
+        if parts:
+            branding_section = "Branding: " + " ".join(parts) + "\n\n"
+
     return (
         "IMPORTANT: The coaching frameworks reference is already included in your "
         "system prompt. Do NOT use tool calls — everything is already loaded.\n\n"
         "Output ONLY the raw HTML document. Do NOT output any reasoning, planning, "
         "step-by-step notes, or commentary before or after the HTML. Start your "
         "response with <!DOCTYPE html> and end with </html>. No code fences.\n\n"
+        f"{branding_section}"
         "Generate a coaching report as a self-contained HTML document. "
         "Requirements:\n"
         "- Complete <!DOCTYPE html> with inline <style> in <head>\n"
@@ -274,14 +318,16 @@ def run_report_generation(
     analysis_text: str,
     api_key: str,
     model: str | None = None,
+    org_id: str | None = None,
+    branding: dict | None = None,
 ) -> str:
     """Generate a coaching report synchronously. Returns HTML string."""
     from api.config import get_settings
 
     settings = get_settings()
     model = model or settings.claude_model
-    system_prompt = _build_report_system_prompt()
-    user_message = _build_report_user_message(analysis_text)
+    system_prompt, _template_id = _build_report_system_prompt(org_id=org_id)
+    user_message = _build_report_user_message(analysis_text, branding=branding)
 
     client = anthropic.Anthropic(api_key=api_key, max_retries=3)
     message = client.messages.create(

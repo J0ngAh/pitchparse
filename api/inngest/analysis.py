@@ -94,14 +94,18 @@ def run_analysis_fn(ctx: inngest.ContextSync) -> dict:
     def call_claude() -> dict:
         settings = get_settings()
         config = get_org_config(org_config_raw)
-        result: AnalysisResult = run_analysis(
+        result: AnalysisResult
+        result, template_id = run_analysis(
             transcript_text=transcript_body,
             api_key=settings.anthropic_api_key,
             model=model,
             focus=focus,
             config=config,
+            org_id=org_id,
         )
-        return result.model_dump()
+        data = result.model_dump()
+        data["_prompt_template_id"] = template_id
+        return data
 
     analysis_data: dict = ctx.step.run("call_claude", call_claude)
 
@@ -112,9 +116,12 @@ def run_analysis_fn(ctx: inngest.ContextSync) -> dict:
         both are independent DB writes that don't depend on each other.
         """
         db = get_supabase_client()
+        prompt_template_id = analysis_data.pop("_prompt_template_id", None)
         result = AnalysisResult(**analysis_data)
         body = render_analysis_markdown(result)
         update = _build_analysis_update(result, body)
+        if prompt_template_id:
+            update["prompt_template_id"] = prompt_template_id
         db.table("analyses").update(update).eq("id", analysis_id).execute()
         db.rpc("increment_analysis_count", {"org_id_param": org_id}).execute()
 

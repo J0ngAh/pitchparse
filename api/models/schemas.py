@@ -264,3 +264,27 @@ class ConversationDetail(ConversationResponse):
 
 class ChatMessageRequest(BaseModel):
     content: str = Field(min_length=1, max_length=10000)
+
+
+# ---------- Prompt Templates ----------
+
+
+class PromptTemplateResponse(BaseModel):
+    id: UUID
+    org_id: UUID | None = None
+    slug: str
+    version: int
+    body: str
+    created_by: UUID | None = None
+    created_at: datetime
+    is_default: bool = False
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class PromptTemplateCreate(BaseModel):
+    body: str = Field(min_length=1, max_length=50000)
+
+
+class PromptRevertRequest(BaseModel):
+    version: int = Field(ge=1)

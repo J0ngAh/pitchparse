@@ -102,8 +102,9 @@ class TestIsCustomConfig:
 
 class TestBuildSystemPrompt:
     def test_loads_without_error(self):
-        prompt = build_system_prompt()
+        prompt, template_id = build_system_prompt()
         assert len(prompt) > 100
+        assert template_id is None  # No org_id means file fallback
 
 
 class TestStripToolXml:

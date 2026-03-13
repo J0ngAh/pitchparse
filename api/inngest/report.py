@@ -81,11 +81,23 @@ def generate_report_fn(ctx: inngest.ContextSync) -> dict:
     analysis: dict = ctx.step.run("fetch_analysis", fetch_analysis)
 
     def call_claude() -> str:
+        from api.services.config_service import get_org_config
+
         settings = get_settings()
+
+        # Fetch org config for branding injection into reports
+        db2 = get_supabase_client()
+        org_result = db2.table("organizations").select("config").eq("id", org_id).single().execute()
+        org_config_json = row_as_dict(org_result).get("config")
+        config = get_org_config(org_config_json)
+        branding = config.get("branding")
+
         return run_report_generation(
             analysis_text=analysis["body"],
             api_key=settings.anthropic_api_key,
             model=model,
+            org_id=org_id,
+            branding=branding,
         )
 
     html_content: str = ctx.step.run("call_claude", call_claude)

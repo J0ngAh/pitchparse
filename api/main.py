@@ -23,6 +23,7 @@ from api.routers import (
     coach,
     dashboard,
     org,
+    prompts,
     reports,
     team,
     transcripts,
@@ -126,6 +127,7 @@ app.include_router(org.router, prefix="/api/org", tags=["org"])
 app.include_router(coach.router, prefix="/api/coach", tags=["coach"])
 app.include_router(admin.router, prefix="/api/admin", tags=["admin"])
 app.include_router(team.router, prefix="/api/team", tags=["team"])
+app.include_router(prompts.router, prefix="/api/prompts", tags=["prompts"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 
 

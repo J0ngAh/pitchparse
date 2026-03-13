@@ -27,7 +27,7 @@ class TestScoringBenchmark:
         from api.services.analysis_service import run_analysis
 
         transcript = (FIXTURES_DIR / "benchmark_good.md").read_text()
-        result = run_analysis(
+        result, _ = run_analysis(
             transcript_text=transcript,
             api_key=os.environ["ANTHROPIC_API_KEY"],
         )
@@ -45,7 +45,7 @@ class TestScoringBenchmark:
         from api.services.analysis_service import run_analysis
 
         transcript = (FIXTURES_DIR / "benchmark_poor.md").read_text()
-        result = run_analysis(
+        result, _ = run_analysis(
             transcript_text=transcript,
             api_key=os.environ["ANTHROPIC_API_KEY"],
         )
@@ -69,8 +69,8 @@ class TestScoringBenchmark:
         transcript = (FIXTURES_DIR / "benchmark_good.md").read_text()
         api_key = os.environ["ANTHROPIC_API_KEY"]
 
-        result_1 = run_analysis(transcript_text=transcript, api_key=api_key)
-        result_2 = run_analysis(transcript_text=transcript, api_key=api_key)
+        result_1, _ = run_analysis(transcript_text=transcript, api_key=api_key)
+        result_2, _ = run_analysis(transcript_text=transcript, api_key=api_key)
 
         score_diff = abs(result_1.overall_score - result_2.overall_score)
         assert score_diff <= 10, (
